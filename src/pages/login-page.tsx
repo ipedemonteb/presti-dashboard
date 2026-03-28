@@ -1,10 +1,54 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft } from "lucide-react";
-import { Link } from "react-router";
+import { ArrowLeft, AlertCircle } from "lucide-react";
+import { Link, useNavigate } from "react-router";
+import { useAuth } from "@/components/auth-provider";
+import { authService } from "@/lib/auth";
+import type { ApiError } from "@/types/auth";
 
 export default function LoginPage() {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const response = await authService.login({ email, password });
+      
+      // Crear objeto user temporal (la API no lo retorna)
+      // En una implementación real, deberías obtener estos datos de un endpoint /me
+      const user = {
+        id: "temp-id",
+        nombre: email.split("@")[0], // Usar la parte antes del @ como nombre temporal
+        email: email,
+      };
+      
+      login(response.access_token, user);
+      navigate("/dashboard");
+    } catch (err: any) {
+      const apiError = err.response?.data as ApiError | undefined;
+      
+      if (err.response?.status === 401) {
+        setError("Email o contraseña incorrectos");
+      } else if (apiError?.message) {
+        setError(apiError.message);
+      } else {
+        setError("Error al iniciar sesión. Intenta nuevamente.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b">
@@ -29,13 +73,23 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <form className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <div className="flex items-start gap-2 p-3 text-sm border border-destructive/50 bg-destructive/10 text-destructive rounded-md">
+                <AlertCircle className="size-4 mt-0.5 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input 
                 id="email" 
                 type="email" 
                 placeholder="tu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
                 required
               />
             </div>
@@ -51,12 +105,15 @@ export default function LoginPage() {
                 id="password" 
                 type="password" 
                 placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
                 required
               />
             </div>
 
-            <Button type="submit" className="w-full" size="lg">
-              Ingresar
+            <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+              {isLoading ? "Ingresando..." : "Ingresar"}
             </Button>
           </form>
 

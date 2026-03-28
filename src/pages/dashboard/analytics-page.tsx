@@ -1,208 +1,290 @@
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Users, 
-  DollarSign, 
+import { useEffect, useMemo, useState } from "react";
+import {
+  Activity,
   AlertTriangle,
+  ArrowDownCircle,
+  ArrowUpCircle,
   CheckCircle2,
-  Activity
+  DollarSign,
+  LoaderCircle,
+  TrendingDown,
+  TrendingUp,
+  Users,
 } from "lucide-react";
+import { dashboardService } from "@/lib/dashboard-service";
+import { getNumber } from "@/lib/api-helpers";
+import type { ApiUserResource, DailyUsage, RecommendationResource, ApiProduct } from "@/types/api-resources";
+import type { ApiError } from "@/types/auth";
+import { Button } from "@/components/ui/button";
+
+function isApprovedRecommendation(item: RecommendationResource) {
+  const value = (item.estado ?? item.resultado ?? "").toLowerCase();
+  return value.includes("aprob");
+}
 
 export default function AnalyticsPage() {
-  const stats = [
+  const [users, setUsers] = useState<ApiUserResource[]>([]);
+  const [products, setProducts] = useState<ApiProduct[]>([]);
+  const [recommendations, setRecommendations] = useState<RecommendationResource[]>([]);
+  const [usage, setUsage] = useState<DailyUsage | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const portfolioSnapshot = [
     {
-      name: "Consultas del mes",
-      value: "2,847",
-      change: "+12.3%",
-      trend: "up",
-      icon: Activity,
+      id: "1",
+      cliente: "Maria Gonzalez",
+      documento: "35.234.567",
+      variacion: "+10.8%",
+      estado: "mejora" as const,
+      detalle: "Cancelo deuda de tarjeta y mejoro su score mensual.",
     },
     {
-      name: "Tasa de aprobación",
-      value: "68.4%",
-      change: "+4.1%",
-      trend: "up",
-      icon: CheckCircle2,
+      id: "2",
+      cliente: "Juan Perez",
+      documento: "28.456.789",
+      variacion: "-5.6%",
+      estado: "deterioro" as const,
+      detalle: "Aparecio nueva deuda informada y requiere revision.",
     },
     {
-      name: "Monto promedio",
-      value: "$15,420",
-      change: "-2.4%",
-      trend: "down",
-      icon: DollarSign,
+      id: "3",
+      cliente: "Ana Martinez",
+      documento: "41.567.890",
+      variacion: "+5.1%",
+      estado: "mejora" as const,
+      detalle: "Sostuvo pagos consistentes en los ultimos meses.",
     },
     {
-      name: "Clientes activos",
-      value: "1,234",
-      change: "+8.2%",
-      trend: "up",
-      icon: Users,
+      id: "4",
+      cliente: "Carlos Lopez",
+      documento: "32.678.901",
+      variacion: "-11.9%",
+      estado: "deterioro" as const,
+      detalle: "Presento incumplimiento reciente en producto vigente.",
     },
   ];
 
-  const recentRecommendations = [
-    {
-      id: 1,
-      client: "María González",
-      company: "Tech Solutions SA",
-      recommendation: "Préstamo Personal - $50,000",
-      confidence: 92,
-      status: "approved",
-      date: "Hace 2 horas"
-    },
-    {
-      id: 2,
-      client: "Carlos Martínez",
-      company: "Innovate Corp",
-      recommendation: "Línea de Crédito - $100,000",
-      confidence: 85,
-      status: "pending",
-      date: "Hace 4 horas"
-    },
-    {
-      id: 3,
-      client: "Ana Rodríguez",
-      company: "StartUp Labs",
-      recommendation: "Rechazar solicitud",
-      confidence: 78,
-      status: "rejected",
-      date: "Hace 6 horas"
-    },
-    {
-      id: 4,
-      client: "Luis Fernández",
-      company: "Growth Finance",
-      recommendation: "Préstamo PYME - $75,000",
-      confidence: 88,
-      status: "approved",
-      date: "Hace 1 día"
-    },
-  ];
+  const loadData = async () => {
+    try {
+      setError("");
+      const [usersData, productsData, recommendationsData, usageData] = await Promise.all([
+        dashboardService.getUsers(),
+        dashboardService.getProducts(),
+        dashboardService.getRecommendations(),
+        dashboardService.getUsageToday(),
+      ]);
 
-  const alerts = [
-    {
-      id: 1,
-      type: "warning",
-      title: "Parámetro de riesgo actualizado",
-      description: "El umbral de riesgo crediticio fue modificado por el sistema de aprendizaje.",
-      time: "Hace 30 min"
-    },
-    {
-      id: 2,
-      type: "info",
-      title: "Nueva tendencia detectada",
-      description: "Incremento del 15% en solicitudes de préstamos personales.",
-      time: "Hace 2 horas"
-    },
-  ];
+      setUsers(usersData);
+      setProducts(productsData);
+      setRecommendations(recommendationsData);
+      setUsage(usageData);
+    } catch (err) {
+      const apiError = (err as { response?: { data?: ApiError } }).response?.data;
+      setError(apiError?.message ?? "No pudimos cargar las metricas del dashboard.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadData();
+  }, []);
+
+  const stats = useMemo(() => {
+    const consultas = getNumber(usage?.consultasHoy, getNumber(usage?.total, getNumber(usage?.used, 0)));
+    const totalRecommendations = recommendations.length;
+    const approved = recommendations.filter((item) => isApprovedRecommendation(item)).length;
+    const approvalRate = totalRecommendations > 0 ? (approved / totalRecommendations) * 100 : 0;
+    const montoPromedio = products.length > 0
+      ? Math.round(
+          products.reduce((sum, product) => sum + getNumber(product.montoMax, getNumber(product.limiteMontoTotalMax, 0)), 0) /
+            products.length
+        )
+      : 0;
+
+    return [
+      {
+        name: "Consultas de hoy",
+        value: consultas.toLocaleString("es-AR"),
+        change: usage?.limiteDiario ? `de ${usage.limiteDiario}` : "en uso",
+        trend: "up" as const,
+        icon: Activity,
+      },
+      {
+        name: "Tasa de aprobacion",
+        value: `${approvalRate.toFixed(1)}%`,
+        change: `${approved}/${totalRecommendations || 0}`,
+        trend: approvalRate >= 50 ? "up" as const : "down" as const,
+        icon: CheckCircle2,
+      },
+      {
+        name: "Monto maximo promedio",
+        value: montoPromedio
+          ? new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(montoPromedio)
+          : "Sin dato",
+        change: `${products.length} productos`,
+        trend: "up" as const,
+        icon: DollarSign,
+      },
+      {
+        name: "Usuarios cargados",
+        value: users.length.toLocaleString("es-AR"),
+        change: `${products.length} productos activos`,
+        trend: "up" as const,
+        icon: Users,
+      },
+    ];
+  }, [products, recommendations, usage, users]);
+
+  const portfolioMetrics = useMemo(() => {
+    const improved = portfolioSnapshot.filter((item) => item.estado === "mejora").length;
+    const deteriorated = portfolioSnapshot.filter((item) => item.estado === "deterioro").length;
+
+    return {
+      monitored: portfolioSnapshot.length,
+      improved,
+      deteriorated,
+      review: deteriorated,
+    };
+  }, [portfolioSnapshot]);
 
   return (
     <div className="p-8 space-y-8">
-      {/* Header */}
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
         <p className="text-muted-foreground">
-          Visión general de tus métricas y recomendaciones
+          Vision general de actividad, productos y recomendaciones.
         </p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <div key={stat.name} className="p-6 rounded-lg border bg-card">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center justify-center size-12 rounded-lg bg-primary/10">
-                  <Icon className="size-6 text-primary" />
-                </div>
-                <div className={`flex items-center gap-1 text-sm font-medium ${
-                  stat.trend === "up" ? "text-green-600" : "text-red-600"
-                }`}>
-                  {stat.trend === "up" ? (
-                    <TrendingUp className="size-4" />
-                  ) : (
-                    <TrendingDown className="size-4" />
-                  )}
-                  {stat.change}
-                </div>
-              </div>
-              <div className="space-y-1">
-                <p className="text-2xl font-bold">{stat.value}</p>
-                <p className="text-sm text-muted-foreground">{stat.name}</p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {error ? (
+        <div className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+          <AlertTriangle className="size-4 mt-0.5 shrink-0" />
+          <span>{error}</span>
+          <Button variant="outline" size="sm" className="ml-auto" onClick={() => {
+            setIsLoading(true);
+            void loadData();
+          }}>
+            Reintentar
+          </Button>
+        </div>
+      ) : null}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Recommendations */}
-        <div className="lg:col-span-2 rounded-lg border bg-card">
-          <div className="p-6 border-b">
-            <h2 className="text-xl font-semibold">Recomendaciones Recientes</h2>
-          </div>
-          <div className="p-6">
-            <div className="space-y-4">
-              {recentRecommendations.map((rec) => (
-                <div key={rec.id} className="flex items-start gap-4 p-4 rounded-lg border hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center justify-center size-10 rounded-full bg-primary/10 shrink-0">
-                    <Users className="size-5 text-primary" />
+      {isLoading ? (
+        <div className="rounded-lg border bg-card p-10 text-muted-foreground flex items-center justify-center">
+          <LoaderCircle className="mr-2 h-5 w-5 animate-spin" />
+          Cargando metricas...
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {stats.map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <div key={stat.name} className="p-6 rounded-lg border bg-card">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center justify-center size-12 rounded-lg bg-primary/10">
+                      <Icon className="size-6 text-primary" />
+                    </div>
+                    <div className={`flex items-center gap-1 text-sm font-medium ${stat.trend === "up" ? "text-green-600" : "text-red-600"}`}>
+                      {stat.trend === "up" ? <TrendingUp className="size-4" /> : <TrendingDown className="size-4" />}
+                      {stat.change}
+                    </div>
                   </div>
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="font-medium">{rec.client}</p>
-                        <p className="text-sm text-muted-foreground">{rec.company}</p>
+                  <div className="space-y-1">
+                    <p className="text-2xl font-bold">{stat.value}</p>
+                    <p className="text-sm text-muted-foreground">{stat.name}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 rounded-lg border bg-card">
+              <div className="p-6 border-b">
+                <h2 className="text-xl font-semibold">Movimientos de cartera</h2>
+              </div>
+              <div className="p-6">
+                <div className="space-y-4">
+                  {portfolioSnapshot.map((client) => (
+                    <div key={client.id} className="flex items-start gap-4 p-4 rounded-lg border hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center justify-center size-10 rounded-full bg-primary/10 shrink-0">
+                        <Users className="size-5 text-primary" />
                       </div>
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        rec.status === "approved" 
-                          ? "bg-green-100 text-green-700" 
-                          : rec.status === "rejected"
-                          ? "bg-red-100 text-red-700"
-                          : "bg-yellow-100 text-yellow-700"
-                      }`}>
-                        {rec.status === "approved" ? "Aprobado" : rec.status === "rejected" ? "Rechazado" : "Pendiente"}
-                      </span>
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="font-medium">{client.cliente}</p>
+                            <p className="text-sm text-muted-foreground">DNI: {client.documento}</p>
+                          </div>
+                          <span className={`text-xs px-2 py-1 rounded-full ${client.estado === "mejora" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                            {client.estado === "mejora" ? "Mejora" : "Deterioro"}
+                          </span>
+                        </div>
+                        <p className={`text-sm font-medium ${client.estado === "mejora" ? "text-green-700" : "text-red-700"}`}>
+                          Variacion: {client.variacion}
+                        </p>
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <span>{client.detalle}</span>
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-sm font-medium text-primary">{rec.recommendation}</p>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span>Confianza: {rec.confidence}%</span>
-                      <span>•</span>
-                      <span>{rec.date}</span>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* Alerts */}
-        <div className="rounded-lg border bg-card">
-          <div className="p-6 border-b">
-            <h2 className="text-xl font-semibold">Alertas</h2>
-          </div>
-          <div className="p-6">
-            <div className="space-y-4">
-              {alerts.map((alert) => (
-                <div key={alert.id} className="p-4 rounded-lg border">
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle className={`size-5 shrink-0 ${
-                      alert.type === "warning" ? "text-yellow-600" : "text-blue-600"
-                    }`} />
-                    <div className="space-y-1">
-                      <p className="font-medium text-sm">{alert.title}</p>
-                      <p className="text-xs text-muted-foreground">{alert.description}</p>
-                      <p className="text-xs text-muted-foreground">{alert.time}</p>
+            <div className="rounded-lg border bg-card">
+              <div className="p-6 border-b">
+                <h2 className="text-xl font-semibold">Resumen de cartera</h2>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="rounded-lg border p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Clientes monitoreados</p>
+                      <p className="text-2xl font-bold">{portfolioMetrics.monitored}</p>
                     </div>
+                    <Users className="size-5 text-muted-foreground" />
                   </div>
                 </div>
-              ))}
+                <div className="rounded-lg border p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Mejoraron</p>
+                      <p className="text-2xl font-bold text-green-600">{portfolioMetrics.improved}</p>
+                    </div>
+                    <ArrowUpCircle className="size-5 text-green-600" />
+                  </div>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Empeoraron</p>
+                      <p className="text-2xl font-bold text-red-600">{portfolioMetrics.deteriorated}</p>
+                    </div>
+                    <ArrowDownCircle className="size-5 text-red-600" />
+                  </div>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Para revision</p>
+                      <p className="text-2xl font-bold text-yellow-600">{portfolioMetrics.review}</p>
+                    </div>
+                    <CheckCircle2 className="size-5 text-yellow-600" />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Este bloque de cartera es estatico por ahora y se puede conectar despues a una fuente real de seguimiento historico.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }

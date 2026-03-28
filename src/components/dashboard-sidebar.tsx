@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/components/auth-provider";
 
 const navigation = [
   { name: "Analytics", href: "/dashboard", icon: LayoutDashboard },
@@ -24,6 +25,7 @@ const secondaryNavigation = [
 
 export function DashboardSidebar() {
   const location = useLocation();
+  const { user, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -44,8 +46,8 @@ export function DashboardSidebar() {
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0 text-left">
-              <p className="text-sm font-medium truncate">Juan Pérez</p>
-              <p className="text-xs text-muted-foreground truncate">Fintech S.A.</p>
+              <p className="text-sm font-medium truncate">{user?.nombre || "Usuario"}</p>
+              <p className="text-xs text-muted-foreground truncate">{user?.email || ""}</p>
             </div>
           )}
         </div>
@@ -103,6 +105,7 @@ export function DashboardSidebar() {
         })}
         
         <button
+          onClick={logout}
           className={cn(
             "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-muted-foreground hover:bg-muted hover:text-foreground",
             collapsed && "justify-center"

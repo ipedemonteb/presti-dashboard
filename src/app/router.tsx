@@ -6,6 +6,7 @@ import RegisterPage from "@/pages/register-page";
 import ForgotPasswordPage from "@/pages/forgot-password-page";
 import NotFoundPage from "@/pages/not-found-page";
 
+import { ProtectedRoute } from "@/components/protected-route";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import AnalyticsPage from "@/pages/dashboard/analytics-page";
 import ParametersPage from "@/pages/dashboard/parameters-page";
@@ -32,7 +33,11 @@ export const router = createBrowserRouter([
   },
   {
     path: "/dashboard",
-    element: <DashboardLayout />,
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout />
+      </ProtectedRoute>
+    ),
     children: [
       {
         index: true,

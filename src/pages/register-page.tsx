@@ -1,10 +1,67 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft } from "lucide-react";
-import { Link } from "react-router";
+import { ArrowLeft, AlertCircle } from "lucide-react";
+import { Link, useNavigate } from "react-router";
+import { useAuth } from "@/components/auth-provider";
+import { authService } from "@/lib/auth";
+import type { ApiError } from "@/types/auth";
 
 export default function RegisterPage() {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+  const [nombre, setNombre] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    // Validaciones locales
+    if (password.length < 8) {
+      setError("La contraseña debe tener al menos 8 caracteres");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Las contraseñas no coinciden");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await authService.signup({ nombre, email, password });
+      
+      // Crear objeto user con los datos del registro
+      const user = {
+        id: "temp-id",
+        nombre: nombre,
+        email: email,
+      };
+      
+      login(response.access_token, user);
+      navigate("/dashboard");
+    } catch (err: any) {
+      const apiError = err.response?.data as ApiError | undefined;
+      
+      if (err.response?.status === 409) {
+        setError("El email ya está registrado");
+      } else if (apiError?.message) {
+        setError(apiError.message);
+      } else {
+        setError("Error al crear la cuenta. Intenta nuevamente.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b">
@@ -29,34 +86,23 @@ export default function RegisterPage() {
             </p>
           </div>
 
-          <form className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="firstName">Nombre</Label>
-                <Input 
-                  id="firstName" 
-                  type="text" 
-                  placeholder="Juan"
-                  required
-                />
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <div className="flex items-start gap-2 p-3 text-sm border border-destructive/50 bg-destructive/10 text-destructive rounded-md">
+                <AlertCircle className="size-4 mt-0.5 flex-shrink-0" />
+                <span>{error}</span>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName">Apellido</Label>
-                <Input 
-                  id="lastName" 
-                  type="text" 
-                  placeholder="Pérez"
-                  required
-                />
-              </div>
-            </div>
+            )}
 
             <div className="space-y-2">
-              <Label htmlFor="company">Empresa</Label>
+              <Label htmlFor="nombre">Nombre de la empresa</Label>
               <Input 
-                id="company" 
+                id="nombre" 
                 type="text" 
-                placeholder="Tu Fintech"
+                placeholder="Tu Fintech SA"
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                disabled={isLoading}
                 required
               />
             </div>
@@ -67,6 +113,9 @@ export default function RegisterPage() {
                 id="email" 
                 type="email" 
                 placeholder="tu@empresa.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
                 required
               />
             </div>
@@ -77,10 +126,13 @@ export default function RegisterPage() {
                 id="password" 
                 type="password" 
                 placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
                 required
               />
               <p className="text-xs text-muted-foreground">
-                Mínimo 8 caracteres, incluyendo mayúsculas y números
+                Mínimo 8 caracteres
               </p>
             </div>
 
@@ -90,31 +142,15 @@ export default function RegisterPage() {
                 id="confirmPassword" 
                 type="password" 
                 placeholder="••••••••"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={isLoading}
                 required
               />
             </div>
 
-            <div className="flex items-start gap-3">
-              <input 
-                type="checkbox" 
-                id="terms" 
-                className="mt-1"
-                required
-              />
-              <label htmlFor="terms" className="text-sm text-muted-foreground">
-                Acepto los{" "}
-                <a href="#" className="text-foreground hover:underline">
-                  términos de servicio
-                </a>{" "}
-                y la{" "}
-                <a href="#" className="text-foreground hover:underline">
-                  política de privacidad
-                </a>
-              </label>
-            </div>
-
-            <Button type="submit" className="w-full" size="lg">
-              Crear cuenta
+            <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+              {isLoading ? "Creando cuenta..." : "Crear cuenta"}
             </Button>
           </form>
 

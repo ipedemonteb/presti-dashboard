@@ -1,0 +1,104 @@
+export type ApiProductType = "PRESTAMO" | "MICROPRESTAMO" | "TARJETA_CREDITO";
+
+export interface ApiProduct {
+  id: string;
+  nombre: string;
+  activo: boolean;
+  tipo: ApiProductType;
+  tasaMin?: number | null;
+  tasaMax?: number | null;
+  montoMin?: number | null;
+  montoMax?: number | null;
+  cuotasMin?: number | null;
+  cuotasMax?: number | null;
+  limiteCuotasMin?: number | null;
+  limiteCuotasMax?: number | null;
+  limiteMontoTotalMin?: number | null;
+  limiteMontoTotalMax?: number | null;
+  interesMin?: number | null;
+  interesMax?: number | null;
+}
+
+export interface CreateProductDto {
+  nombre: string;
+  activo: boolean;
+  tipo: ApiProductType;
+  tasaMin?: number;
+  tasaMax?: number;
+  montoMin?: number;
+  montoMax?: number;
+  cuotasMin?: number;
+  cuotasMax?: number;
+  limiteCuotasMin?: number;
+  limiteCuotasMax?: number;
+  limiteMontoTotalMin?: number;
+  limiteMontoTotalMax?: number;
+  interesMin?: number;
+  interesMax?: number;
+}
+
+export type UpdateProductDto = Partial<CreateProductDto>;
+
+export interface ApiKeyResource {
+  id?: string;
+  apiKey?: string;
+  key?: string;
+  clave?: string;
+  activo?: boolean;
+  active?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SubscriptionPlan {
+  id?: string;
+  nombre?: string;
+  name?: string;
+  descripcion?: string;
+  precio?: number;
+  price?: number;
+  limiteDiario?: number;
+  limiteMensual?: number;
+}
+
+export interface ActiveSubscription {
+  id?: string;
+  nombre?: string;
+  plan?: string;
+  estado?: string;
+  activa?: boolean;
+  fechaInicio?: string;
+  fechaFin?: string;
+  limiteDiario?: number;
+  limiteMensual?: number;
+}
+
+export interface DailyUsage {
+  consultasHoy?: number;
+  total?: number;
+  used?: number;
+  remaining?: number;
+  limiteDiario?: number;
+}
+
+export interface ApiUserResource {
+  id?: string;
+  cuil?: string;
+  nombre?: string;
+  apellido?: string;
+  email?: string;
+}
+
+export interface RecommendationResource {
+  id?: string;
+  usuarioCuil?: string;
+  usuarioNombre?: string;
+  nombre?: string;
+  productoNombre?: string;
+  producto?: string;
+  resultado?: string;
+  estado?: string;
+  score?: number;
+  confianza?: number;
+  createdAt?: string;
+}

@@ -1,128 +1,305 @@
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User, Building2, Bell, Shield, Key, Palette } from "lucide-react";
+import { useAuth } from "@/components/auth-provider";
+import { dashboardService } from "@/lib/dashboard-service";
+import { formatRelativeDate, getNumber } from "@/lib/api-helpers";
+import type { ActiveSubscription, ApiKeyResource, DailyUsage, SubscriptionPlan } from "@/types/api-resources";
+import type { ApiError } from "@/types/auth";
+import { AlertCircle, Bell, Building2, Key, LoaderCircle, Palette, Shield, User } from "lucide-react";
+
+function getApiKeyValue(resource: ApiKeyResource) {
+  return resource.apiKey ?? resource.key ?? resource.clave ?? "Sin valor";
+}
+
+function maskApiKey(value: string) {
+  if (value.length <= 10) return value;
+  return `${value.slice(0, 8)}****************${value.slice(-4)}`;
+}
+
+function getPlanName(plan?: ActiveSubscription | SubscriptionPlan | null) {
+  if (!plan) return "Sin plan";
+  const planName = "plan" in plan ? plan.plan : undefined;
+  const displayName = "name" in plan ? plan.name : undefined;
+  return plan.nombre ?? planName ?? displayName ?? "Plan sin nombre";
+}
 
 export default function SettingsPage() {
+  const { user } = useAuth();
+  const [apiKeys, setApiKeys] = useState<ApiKeyResource[]>([]);
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [activeSubscription, setActiveSubscription] = useState<ActiveSubscription | null>(null);
+  const [usage, setUsage] = useState<DailyUsage | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isGeneratingKey, setIsGeneratingKey] = useState(false);
+  const [error, setError] = useState("");
+
+  const loadSettingsData = async () => {
+    try {
+      setError("");
+      const [apiKeysData, plansData, activeData, usageData] = await Promise.all([
+        dashboardService.getApiKeys(),
+        dashboardService.getPlans(),
+        dashboardService.getActiveSubscription(),
+        dashboardService.getUsageToday(),
+      ]);
+
+      setApiKeys(apiKeysData);
+      setPlans(plansData);
+      setActiveSubscription(activeData);
+      setUsage(usageData);
+    } catch (err) {
+      const apiError = (err as { response?: { data?: ApiError } }).response?.data;
+      setError(apiError?.message ?? "No pudimos cargar la configuracion conectada a la API.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadSettingsData();
+  }, []);
+
+  const currentUsage = useMemo(() => {
+    if (!usage) return 0;
+    return getNumber(usage.consultasHoy, getNumber(usage.total, getNumber(usage.used, 0)));
+  }, [usage]);
+
+  const dailyLimit = useMemo(() => {
+    if (!usage && !activeSubscription) return 0;
+    return getNumber(usage?.limiteDiario, getNumber(activeSubscription?.limiteDiario, 0));
+  }, [activeSubscription, usage]);
+
+  const handleCreateApiKey = async () => {
+    try {
+      setIsGeneratingKey(true);
+      setError("");
+      const created = await dashboardService.createApiKey();
+      if (created) {
+        setApiKeys((current) => [created, ...current]);
+      } else {
+        await loadSettingsData();
+      }
+    } catch (err) {
+      const apiError = (err as { response?: { data?: ApiError } }).response?.data;
+      setError(apiError?.message ?? "No pudimos generar una nueva API key.");
+    } finally {
+      setIsGeneratingKey(false);
+    }
+  };
+
+  const handleDeactivateApiKey = async (apiKey: string) => {
+    try {
+      setError("");
+      await dashboardService.deactivateApiKey(apiKey);
+      setApiKeys((current) =>
+        current.map((item) =>
+          getApiKeyValue(item) === apiKey ? { ...item, activo: false, active: false } : item
+        )
+      );
+    } catch (err) {
+      const apiError = (err as { response?: { data?: ApiError } }).response?.data;
+      setError(apiError?.message ?? "No pudimos desactivar la API key.");
+    }
+  };
+
   return (
     <div className="p-8 space-y-8">
       <div>
-        <h1 className="text-3xl font-bold mb-2">Configuración</h1>
+        <h1 className="text-3xl font-bold mb-2">Configuracion</h1>
         <p className="text-muted-foreground">
-          Gestiona tu cuenta, empresa y preferencias del sistema.
+          Gestiona tu cuenta, empresa y accesos conectados a la plataforma.
         </p>
       </div>
 
+      {error ? (
+        <div className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+          <AlertCircle className="size-4 mt-0.5 shrink-0" />
+          <span>{error}</span>
+          <Button variant="outline" size="sm" className="ml-auto" onClick={() => {
+            setIsLoading(true);
+            void loadSettingsData();
+          }}>
+            Reintentar
+          </Button>
+        </div>
+      ) : null}
+
       <div className="grid gap-6">
-        {/* Profile Settings */}
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
               <User className="h-5 w-5" />
-              <CardTitle>Información Personal</CardTitle>
+              <CardTitle>Informacion de acceso</CardTitle>
             </div>
             <CardDescription>
-              Actualiza tu información de perfil
+              Datos disponibles desde la sesion actual.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="firstName">Nombre</Label>
-                <Input id="firstName" defaultValue="Juan" />
+                <Label htmlFor="nombre">Nombre</Label>
+                <Input id="nombre" value={user?.nombre ?? ""} readOnly />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="lastName">Apellido</Label>
-                <Input id="lastName" defaultValue="Pérez" />
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" value={user?.email ?? ""} readOnly />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" defaultValue="juan.perez@empresa.com" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Teléfono</Label>
-              <Input id="phone" type="tel" defaultValue="+54 11 1234-5678" />
-            </div>
-            <Button>Guardar Cambios</Button>
           </CardContent>
         </Card>
 
-        {/* Company Settings */}
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
               <Building2 className="h-5 w-5" />
-              <CardTitle>Información de Empresa</CardTitle>
+              <CardTitle>Suscripcion</CardTitle>
             </div>
             <CardDescription>
-              Datos de tu organización
+              Estado del plan, limites y uso actual del cliente autenticado.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="companyName">Nombre de la Empresa</Label>
-              <Input id="companyName" defaultValue="Fintech Solutions SA" />
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="industry">Industria</Label>
-                <Input id="industry" defaultValue="Servicios Financieros" />
+            {isLoading ? (
+              <div className="flex items-center text-sm text-muted-foreground">
+                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                Cargando suscripcion...
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="size">Tamaño</Label>
-                <Input id="size" defaultValue="50-100 empleados" />
-              </div>
-            </div>
-            <Button>Actualizar Información</Button>
+            ) : (
+              <>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="rounded-lg border p-4">
+                    <p className="text-sm text-muted-foreground">Plan activo</p>
+                    <p className="mt-1 text-lg font-semibold">{getPlanName(activeSubscription)}</p>
+                  </div>
+                  <div className="rounded-lg border p-4">
+                    <p className="text-sm text-muted-foreground">Consultas de hoy</p>
+                    <p className="mt-1 text-lg font-semibold">{currentUsage}</p>
+                  </div>
+                  <div className="rounded-lg border p-4">
+                    <p className="text-sm text-muted-foreground">Limite diario</p>
+                    <p className="mt-1 text-lg font-semibold">{dailyLimit || "Sin dato"}</p>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border p-4">
+                  <p className="font-medium">Planes disponibles</p>
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    {plans.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No hay planes visibles en la API.</p>
+                    ) : (
+                      plans.map((plan, index) => (
+                        <div key={plan.id ?? `${getPlanName(plan)}-${index}`} className="rounded-md border bg-muted/30 p-3">
+                          <p className="font-medium">{getPlanName(plan)}</p>
+                          <p className="text-sm text-muted-foreground">{plan.descripcion ?? "Sin descripcion"}</p>
+                          <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
+                            <span>Precio: {typeof (plan.precio ?? plan.price) === "number" ? `$${plan.precio ?? plan.price}` : "Sin dato"}</span>
+                            <span>Limite diario: {plan.limiteDiario ?? "-"}</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
-        {/* Notifications Settings */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Key className="h-5 w-5" />
+              <CardTitle>API e integraciones</CardTitle>
+            </div>
+            <CardDescription>
+              API keys del cliente autenticado y accesos para integraciones.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Button onClick={() => void handleCreateApiKey()} disabled={isGeneratingKey}>
+                {isGeneratingKey ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Generar API key
+              </Button>
+              <Button variant="outline" asChild>
+                <a href="https://presti-api.onrender.com/api/docs" target="_blank" rel="noreferrer">
+                  Ver documentacion API
+                </a>
+              </Button>
+            </div>
+
+            {isLoading ? (
+              <div className="flex items-center text-sm text-muted-foreground">
+                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                Cargando API keys...
+              </div>
+            ) : apiKeys.length === 0 ? (
+              <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
+                Todavia no hay API keys generadas para este cliente.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {apiKeys.map((item, index) => {
+                  const value = getApiKeyValue(item);
+                  const isActive = item.activo ?? item.active ?? true;
+
+                  return (
+                    <div key={`${value}-${index}`} className="flex items-center justify-between rounded-lg border p-4">
+                      <div>
+                        <p className="font-medium">{maskApiKey(value)}</p>
+                        <div className="mt-1 flex gap-3 text-xs text-muted-foreground">
+                          <span>{isActive ? "Activa" : "Desactivada"}</span>
+                          <span>Creada: {formatRelativeDate(item.createdAt)}</span>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={!isActive}
+                        onClick={() => void handleDeactivateApiKey(value)}
+                      >
+                        Desactivar
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
               <Bell className="h-5 w-5" />
-              <CardTitle>Preferencias de Notificaciones</CardTitle>
+              <CardTitle>Notificaciones</CardTitle>
             </div>
             <CardDescription>
-              Configura cómo y cuándo recibir notificaciones
+              Preferencias locales de visualizacion del dashboard.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Alertas de riesgo</p>
-                <p className="text-sm text-muted-foreground">Notificaciones sobre umbrales de riesgo críticos</p>
+                <p className="text-sm text-muted-foreground">Seguimiento de reglas y recomendaciones.</p>
               </div>
               <Button variant="outline" size="sm">Activado</Button>
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Actualizaciones del modelo</p>
-                <p className="text-sm text-muted-foreground">Información sobre mejoras en el modelo de IA</p>
-              </div>
-              <Button variant="outline" size="sm">Activado</Button>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Insights semanales</p>
-                <p className="text-sm text-muted-foreground">Resumen semanal de patrones detectados</p>
-              </div>
-              <Button variant="outline" size="sm">Desactivado</Button>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Email diario</p>
-                <p className="text-sm text-muted-foreground">Resumen diario de actividad</p>
+                <p className="font-medium">Resumen diario</p>
+                <p className="text-sm text-muted-foreground">Estado de uso y actividad del cliente.</p>
               </div>
               <Button variant="outline" size="sm">Activado</Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Security Settings */}
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -130,65 +307,15 @@ export default function SettingsPage() {
               <CardTitle>Seguridad</CardTitle>
             </div>
             <CardDescription>
-              Gestiona la seguridad de tu cuenta
+              Acciones disponibles desde el frontend actual.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Autenticación de dos factores</p>
-                <p className="text-sm text-muted-foreground">Agrega una capa extra de seguridad</p>
-              </div>
-              <Button variant="outline" size="sm">Configurar</Button>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Cambiar contraseña</p>
-                <p className="text-sm text-muted-foreground">Última actualización hace 3 meses</p>
-              </div>
-              <Button variant="outline" size="sm">Cambiar</Button>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Sesiones activas</p>
-                <p className="text-sm text-muted-foreground">3 dispositivos conectados</p>
-              </div>
-              <Button variant="outline" size="sm">Ver Detalles</Button>
-            </div>
+          <CardContent className="space-y-4 text-sm text-muted-foreground">
+            <p>La API publicada hoy expone autenticacion por JWT y administracion de API keys.</p>
+            <p>Todavia no hay endpoints documentados para cambio de contrasena, 2FA o sesiones activas.</p>
           </CardContent>
         </Card>
 
-        {/* API Settings */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Key className="h-5 w-5" />
-              <CardTitle>API y Integraciones</CardTitle>
-            </div>
-            <CardDescription>
-              Gestiona tus claves API y conexiones
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">API Key Principal</p>
-                <p className="text-sm text-muted-foreground font-mono">pk_live_**********************8f3a</p>
-              </div>
-              <Button variant="outline" size="sm">Regenerar</Button>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Webhook URL</p>
-                <p className="text-sm text-muted-foreground">https://api.tuempresa.com/webhooks/presti</p>
-              </div>
-              <Button variant="outline" size="sm">Editar</Button>
-            </div>
-            <Button>Ver Documentación API</Button>
-          </CardContent>
-        </Card>
-
-        {/* Appearance Settings */}
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -196,24 +323,11 @@ export default function SettingsPage() {
               <CardTitle>Apariencia</CardTitle>
             </div>
             <CardDescription>
-              Personaliza la interfaz del dashboard
+              El tema se controla desde el selector del header del dashboard.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Tema</p>
-                <p className="text-sm text-muted-foreground">Claro, oscuro o automático</p>
-              </div>
-              <Button variant="outline" size="sm">Claro</Button>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Densidad</p>
-                <p className="text-sm text-muted-foreground">Espaciado entre elementos</p>
-              </div>
-              <Button variant="outline" size="sm">Normal</Button>
-            </div>
+          <CardContent className="space-y-4 text-sm text-muted-foreground">
+            <p>Usa el toggle del encabezado para cambiar entre modo claro, oscuro o sistema.</p>
           </CardContent>
         </Card>
       </div>

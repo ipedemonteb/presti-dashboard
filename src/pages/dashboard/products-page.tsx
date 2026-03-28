@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,73 +19,111 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, CreditCard, Wallet, DollarSign, Trash2, Edit } from "lucide-react";
+import { dashboardService } from "@/lib/dashboard-service";
+import type { ApiProduct, ApiProductType, CreateProductDto } from "@/types/api-resources";
+import type { ApiError } from "@/types/auth";
+import { AlertCircle, CreditCard, DollarSign, Edit, LoaderCircle, Plus, Trash2, Wallet } from "lucide-react";
 
 type ProductType = "prestamo" | "microprestamo" | "tarjeta";
 
-interface Product {
-  id: string;
-  type: ProductType;
+type FormState = {
   name: string;
-  // Préstamo y Microprétamo
-  interestRate?: { min: number; max: number };
-  installments?: { min: number; max: number };
-  amount?: { min: number; max: number };
-  // Tarjeta de Crédito
-  creditInterestRate?: { min: number; max: number };
-  singlePaymentLimit?: { min: number; max: number };
-  installmentLimit?: { min: number; max: number };
-}
+  interestMin: string;
+  interestMax: string;
+  installmentsMin: string;
+  installmentsMax: string;
+  amountMin: string;
+  amountMax: string;
+  creditInterestMin: string;
+  creditInterestMax: string;
+  singlePaymentMin: string;
+  singlePaymentMax: string;
+  installmentLimitMin: string;
+  installmentLimitMax: string;
+};
 
 const productTypes = [
-  { value: "prestamo", label: "Préstamo", icon: DollarSign },
-  { value: "microprestamo", label: "Micropréstamo", icon: Wallet },
-  { value: "tarjeta", label: "Tarjeta de Crédito", icon: CreditCard },
-];
+  { value: "prestamo", label: "Prestamo", icon: DollarSign },
+  { value: "microprestamo", label: "Microprestamo", icon: Wallet },
+  { value: "tarjeta", label: "Tarjeta de Credito", icon: CreditCard },
+] as const;
+
+const emptyFormState: FormState = {
+  name: "",
+  interestMin: "",
+  interestMax: "",
+  installmentsMin: "",
+  installmentsMax: "",
+  amountMin: "",
+  amountMax: "",
+  creditInterestMin: "",
+  creditInterestMax: "",
+  singlePaymentMin: "",
+  singlePaymentMax: "",
+  installmentLimitMin: "",
+  installmentLimitMax: "",
+};
+
+function mapApiTypeToUi(type: ApiProductType): ProductType {
+  if (type === "MICROPRESTAMO") return "microprestamo";
+  if (type === "TARJETA_CREDITO") return "tarjeta";
+  return "prestamo";
+}
+
+function mapUiTypeToApi(type: ProductType): ApiProductType {
+  if (type === "microprestamo") return "MICROPRESTAMO";
+  if (type === "tarjeta") return "TARJETA_CREDITO";
+  return "PRESTAMO";
+}
+
+function toNumber(value: string) {
+  if (!value.trim()) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function formatCurrency(value?: number | null) {
+  if (typeof value !== "number") return "-";
+  return new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ApiProduct[]>([]);
+  const [isPageLoading, setIsPageLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedType, setSelectedType] = useState<ProductType | "">("");
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editingProduct, setEditingProduct] = useState<ApiProduct | null>(null);
+  const [formData, setFormData] = useState<FormState>(emptyFormState);
+  const [error, setError] = useState("");
+  const [submitError, setSubmitError] = useState("");
 
-  // Form state
-  const [formData, setFormData] = useState({
-    name: "",
-    // Préstamo/Micropréstamo
-    interestMin: "",
-    interestMax: "",
-    installmentsMin: "",
-    installmentsMax: "",
-    amountMin: "",
-    amountMax: "",
-    // Tarjeta
-    creditInterestMin: "",
-    creditInterestMax: "",
-    singlePaymentMin: "",
-    singlePaymentMax: "",
-    installmentLimitMin: "",
-    installmentLimitMax: "",
-  });
+  const loadProducts = async () => {
+    try {
+      setError("");
+      const data = await dashboardService.getProducts();
+      setProducts(data);
+    } catch (err) {
+      const apiError = (err as { response?: { data?: ApiError } }).response?.data;
+      setError(apiError?.message ?? "No pudimos cargar los productos.");
+    } finally {
+      setIsPageLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadProducts();
+  }, []);
 
   const resetForm = () => {
-    setFormData({
-      name: "",
-      interestMin: "",
-      interestMax: "",
-      installmentsMin: "",
-      installmentsMax: "",
-      amountMin: "",
-      amountMax: "",
-      creditInterestMin: "",
-      creditInterestMax: "",
-      singlePaymentMin: "",
-      singlePaymentMax: "",
-      installmentLimitMin: "",
-      installmentLimitMax: "",
-    });
+    setFormData(emptyFormState);
     setSelectedType("");
     setEditingProduct(null);
+    setSubmitError("");
   };
 
   const handleOpenDialog = () => {
@@ -93,149 +131,180 @@ export default function ProductsPage() {
     setIsDialogOpen(true);
   };
 
-  const handleEditProduct = (product: Product) => {
+  const handleEditProduct = (product: ApiProduct) => {
     setEditingProduct(product);
-    setSelectedType(product.type);
-    
-    if (product.type === "tarjeta") {
+    setSelectedType(mapApiTypeToUi(product.tipo));
+    setSubmitError("");
+
+    if (product.tipo === "TARJETA_CREDITO") {
       setFormData({
-        name: product.name,
-        interestMin: "",
-        interestMax: "",
-        installmentsMin: "",
-        installmentsMax: "",
-        amountMin: "",
-        amountMax: "",
-        creditInterestMin: product.creditInterestRate?.min.toString() || "",
-        creditInterestMax: product.creditInterestRate?.max.toString() || "",
-        singlePaymentMin: product.singlePaymentLimit?.min.toString() || "",
-        singlePaymentMax: product.singlePaymentLimit?.max.toString() || "",
-        installmentLimitMin: product.installmentLimit?.min.toString() || "",
-        installmentLimitMax: product.installmentLimit?.max.toString() || "",
+        ...emptyFormState,
+        name: product.nombre,
+        creditInterestMin: product.interesMin?.toString() ?? "",
+        creditInterestMax: product.interesMax?.toString() ?? "",
+        singlePaymentMin: product.limiteMontoTotalMin?.toString() ?? "",
+        singlePaymentMax: product.limiteMontoTotalMax?.toString() ?? "",
+        installmentLimitMin: product.limiteCuotasMin?.toString() ?? "",
+        installmentLimitMax: product.limiteCuotasMax?.toString() ?? "",
       });
     } else {
       setFormData({
-        name: product.name,
-        interestMin: product.interestRate?.min.toString() || "",
-        interestMax: product.interestRate?.max.toString() || "",
-        installmentsMin: product.installments?.min.toString() || "",
-        installmentsMax: product.installments?.max.toString() || "",
-        amountMin: product.amount?.min.toString() || "",
-        amountMax: product.amount?.max.toString() || "",
-        creditInterestMin: "",
-        creditInterestMax: "",
-        singlePaymentMin: "",
-        singlePaymentMax: "",
-        installmentLimitMin: "",
-        installmentLimitMax: "",
+        ...emptyFormState,
+        name: product.nombre,
+        interestMin: product.tasaMin?.toString() ?? "",
+        interestMax: product.tasaMax?.toString() ?? "",
+        installmentsMin: product.cuotasMin?.toString() ?? "",
+        installmentsMax: product.cuotasMax?.toString() ?? "",
+        amountMin: product.montoMin?.toString() ?? "",
+        amountMax: product.montoMax?.toString() ?? "",
       });
     }
-    
+
     setIsDialogOpen(true);
   };
 
-  const handleDeleteProduct = (id: string) => {
-    setProducts(products.filter((p) => p.id !== id));
-  };
+  const payload = useMemo<CreateProductDto | null>(() => {
+    if (!selectedType || !formData.name.trim()) {
+      return null;
+    }
 
-  const handleSaveProduct = () => {
-    if (!selectedType || !formData.name) return;
-
-    const newProduct: Product = {
-      id: editingProduct?.id || Date.now().toString(),
-      type: selectedType as ProductType,
-      name: formData.name,
+    const base: CreateProductDto = {
+      nombre: formData.name.trim(),
+      activo: true,
+      tipo: mapUiTypeToApi(selectedType),
     };
 
     if (selectedType === "tarjeta") {
-      newProduct.creditInterestRate = {
-        min: parseFloat(formData.creditInterestMin),
-        max: parseFloat(formData.creditInterestMax),
-      };
-      newProduct.singlePaymentLimit = {
-        min: parseFloat(formData.singlePaymentMin),
-        max: parseFloat(formData.singlePaymentMax),
-      };
-      newProduct.installmentLimit = {
-        min: parseFloat(formData.installmentLimitMin),
-        max: parseFloat(formData.installmentLimitMax),
-      };
-    } else {
-      newProduct.interestRate = {
-        min: parseFloat(formData.interestMin),
-        max: parseFloat(formData.interestMax),
-      };
-      newProduct.installments = {
-        min: parseFloat(formData.installmentsMin),
-        max: parseFloat(formData.installmentsMax),
-      };
-      newProduct.amount = {
-        min: parseFloat(formData.amountMin),
-        max: parseFloat(formData.amountMax),
+      return {
+        ...base,
+        interesMin: toNumber(formData.creditInterestMin),
+        interesMax: toNumber(formData.creditInterestMax),
+        limiteMontoTotalMin: toNumber(formData.singlePaymentMin),
+        limiteMontoTotalMax: toNumber(formData.singlePaymentMax),
+        limiteCuotasMin: toNumber(formData.installmentLimitMin),
+        limiteCuotasMax: toNumber(formData.installmentLimitMax),
       };
     }
 
-    if (editingProduct) {
-      setProducts(products.map((p) => (p.id === editingProduct.id ? newProduct : p)));
-    } else {
-      setProducts([...products, newProduct]);
+    return {
+      ...base,
+      tasaMin: toNumber(formData.interestMin),
+      tasaMax: toNumber(formData.interestMax),
+      cuotasMin: toNumber(formData.installmentsMin),
+      cuotasMax: toNumber(formData.installmentsMax),
+      montoMin: toNumber(formData.amountMin),
+      montoMax: toNumber(formData.amountMax),
+    };
+  }, [formData, selectedType]);
+
+  const handleSaveProduct = async () => {
+    if (!payload) return;
+
+    try {
+      setIsSaving(true);
+      setSubmitError("");
+
+      if (editingProduct) {
+        const updated = await dashboardService.updateProduct(editingProduct.id, payload);
+        if (updated) {
+          setProducts((current) =>
+            current.map((product) => (product.id === editingProduct.id ? updated : product))
+          );
+        } else {
+          await loadProducts();
+        }
+      } else {
+        const created = await dashboardService.createProduct(payload);
+        if (created) {
+          setProducts((current) => [created, ...current]);
+        } else {
+          await loadProducts();
+        }
+      }
+
+      setIsDialogOpen(false);
+      resetForm();
+    } catch (err) {
+      const apiError = (err as { response?: { data?: ApiError } }).response?.data;
+      setSubmitError(apiError?.message ?? "No pudimos guardar el producto.");
+    } finally {
+      setIsSaving(false);
     }
-
-    setIsDialogOpen(false);
-    resetForm();
   };
 
-  const getProductIcon = (type: ProductType) => {
-    const productType = productTypes.find((pt) => pt.value === type);
-    return productType ? productType.icon : DollarSign;
+  const handleDeleteProduct = async (id: string) => {
+    try {
+      setError("");
+      await dashboardService.deleteProduct(id);
+      setProducts((current) => current.filter((product) => product.id !== id));
+    } catch (err) {
+      const apiError = (err as { response?: { data?: ApiError } }).response?.data;
+      setError(apiError?.message ?? "No pudimos eliminar el producto.");
+    }
   };
 
-  const getProductLabel = (type: ProductType) => {
-    const productType = productTypes.find((pt) => pt.value === type);
-    return productType ? productType.label : type;
+  const getProductIcon = (type: ApiProductType) => {
+    const uiType = mapApiTypeToUi(type);
+    return productTypes.find((productType) => productType.value === uiType)?.icon ?? DollarSign;
+  };
+
+  const getProductLabel = (type: ApiProductType) => {
+    if (type === "MICROPRESTAMO") return "Microprestamo";
+    if (type === "TARJETA_CREDITO") return "Tarjeta de Credito";
+    return "Prestamo";
   };
 
   return (
     <div className="p-8 space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold mb-2">Productos</h1>
           <p className="text-muted-foreground">
-            Configura los productos financieros que ofreces y sus rangos de valores
+            Configura los productos financieros que ofreces y sus rangos de valores.
           </p>
         </div>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog
+          open={isDialogOpen}
+          onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) resetForm();
+          }}
+        >
           <DialogTrigger asChild>
             <Button onClick={handleOpenDialog}>
               <Plus className="mr-2 h-4 w-4" />
-              Agregar Producto
+              Agregar producto
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
-                {editingProduct ? "Editar Producto" : "Agregar Nuevo Producto"}
+                {editingProduct ? "Editar producto" : "Agregar nuevo producto"}
               </DialogTitle>
               <DialogDescription>
-                Selecciona el tipo de producto y define los rangos de valores
+                Carga el tipo y los rangos que usara el motor de decision.
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-6 py-4">
-              {/* Nombre del producto */}
+              {submitError ? (
+                <div className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                  <AlertCircle className="size-4 mt-0.5 shrink-0" />
+                  <span>{submitError}</span>
+                </div>
+              ) : null}
+
               <div className="space-y-2">
                 <Label htmlFor="product-name">Nombre del producto</Label>
                 <Input
                   id="product-name"
-                  placeholder="Ej: Préstamo Personal Plus"
+                  placeholder="Ej: Prestamo Personal Plus"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) => setFormData((current) => ({ ...current, name: e.target.value }))}
                 />
               </div>
 
-              {/* Tipo de producto */}
               <div className="space-y-2">
                 <Label htmlFor="product-type">Tipo de producto</Label>
                 <Select
@@ -262,248 +331,137 @@ export default function ProductsPage() {
                 </Select>
               </div>
 
-              {/* Formulario dinámico según tipo */}
-              {selectedType && selectedType !== "tarjeta" && (
+              {selectedType && selectedType !== "tarjeta" ? (
                 <div className="space-y-4 pt-4 border-t">
                   <h3 className="font-semibold">Rangos de valores</h3>
-                  
-                  {/* Tasa de interés */}
+
                   <div className="space-y-2">
-                    <Label>Tasa de interés anual (%)</Label>
+                    <Label>Tasa de interes anual (%)</Label>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="interest-min" className="text-xs text-muted-foreground">
-                          Mínimo
-                        </Label>
-                        <Input
-                          id="interest-min"
-                          type="number"
-                          step="0.1"
-                          placeholder="15.0"
-                          value={formData.interestMin}
-                          onChange={(e) =>
-                            setFormData({ ...formData, interestMin: e.target.value })
-                          }
-                        />
+                        <Label htmlFor="interest-min" className="text-xs text-muted-foreground">Minimo</Label>
+                        <Input id="interest-min" type="number" step="0.1" value={formData.interestMin} onChange={(e) => setFormData((current) => ({ ...current, interestMin: e.target.value }))} />
                       </div>
                       <div>
-                        <Label htmlFor="interest-max" className="text-xs text-muted-foreground">
-                          Máximo
-                        </Label>
-                        <Input
-                          id="interest-max"
-                          type="number"
-                          step="0.1"
-                          placeholder="45.0"
-                          value={formData.interestMax}
-                          onChange={(e) =>
-                            setFormData({ ...formData, interestMax: e.target.value })
-                          }
-                        />
+                        <Label htmlFor="interest-max" className="text-xs text-muted-foreground">Maximo</Label>
+                        <Input id="interest-max" type="number" step="0.1" value={formData.interestMax} onChange={(e) => setFormData((current) => ({ ...current, interestMax: e.target.value }))} />
                       </div>
                     </div>
                   </div>
 
-                  {/* Cuotas */}
                   <div className="space-y-2">
                     <Label>Cantidad de cuotas</Label>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="installments-min" className="text-xs text-muted-foreground">
-                          Mínimo
-                        </Label>
-                        <Input
-                          id="installments-min"
-                          type="number"
-                          placeholder="3"
-                          value={formData.installmentsMin}
-                          onChange={(e) =>
-                            setFormData({ ...formData, installmentsMin: e.target.value })
-                          }
-                        />
+                        <Label htmlFor="installments-min" className="text-xs text-muted-foreground">Minimo</Label>
+                        <Input id="installments-min" type="number" value={formData.installmentsMin} onChange={(e) => setFormData((current) => ({ ...current, installmentsMin: e.target.value }))} />
                       </div>
                       <div>
-                        <Label htmlFor="installments-max" className="text-xs text-muted-foreground">
-                          Máximo
-                        </Label>
-                        <Input
-                          id="installments-max"
-                          type="number"
-                          placeholder="60"
-                          value={formData.installmentsMax}
-                          onChange={(e) =>
-                            setFormData({ ...formData, installmentsMax: e.target.value })
-                          }
-                        />
+                        <Label htmlFor="installments-max" className="text-xs text-muted-foreground">Maximo</Label>
+                        <Input id="installments-max" type="number" value={formData.installmentsMax} onChange={(e) => setFormData((current) => ({ ...current, installmentsMax: e.target.value }))} />
                       </div>
                     </div>
                   </div>
 
-                  {/* Monto */}
                   <div className="space-y-2">
-                    <Label>Monto ($)</Label>
+                    <Label>Monto</Label>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="amount-min" className="text-xs text-muted-foreground">
-                          Mínimo
-                        </Label>
-                        <Input
-                          id="amount-min"
-                          type="number"
-                          placeholder="5000"
-                          value={formData.amountMin}
-                          onChange={(e) =>
-                            setFormData({ ...formData, amountMin: e.target.value })
-                          }
-                        />
+                        <Label htmlFor="amount-min" className="text-xs text-muted-foreground">Minimo</Label>
+                        <Input id="amount-min" type="number" value={formData.amountMin} onChange={(e) => setFormData((current) => ({ ...current, amountMin: e.target.value }))} />
                       </div>
                       <div>
-                        <Label htmlFor="amount-max" className="text-xs text-muted-foreground">
-                          Máximo
-                        </Label>
-                        <Input
-                          id="amount-max"
-                          type="number"
-                          placeholder="500000"
-                          value={formData.amountMax}
-                          onChange={(e) =>
-                            setFormData({ ...formData, amountMax: e.target.value })
-                          }
-                        />
+                        <Label htmlFor="amount-max" className="text-xs text-muted-foreground">Maximo</Label>
+                        <Input id="amount-max" type="number" value={formData.amountMax} onChange={(e) => setFormData((current) => ({ ...current, amountMax: e.target.value }))} />
                       </div>
                     </div>
                   </div>
                 </div>
-              )}
+              ) : null}
 
-              {selectedType === "tarjeta" && (
+              {selectedType === "tarjeta" ? (
                 <div className="space-y-4 pt-4 border-t">
                   <h3 className="font-semibold">Rangos de valores</h3>
-                  
-                  {/* Tasa de interés */}
+
                   <div className="space-y-2">
-                    <Label>Tasa de interés anual (%)</Label>
+                    <Label>Tasa de interes anual (%)</Label>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="credit-interest-min" className="text-xs text-muted-foreground">
-                          Mínimo
-                        </Label>
-                        <Input
-                          id="credit-interest-min"
-                          type="number"
-                          step="0.1"
-                          placeholder="35.0"
-                          value={formData.creditInterestMin}
-                          onChange={(e) =>
-                            setFormData({ ...formData, creditInterestMin: e.target.value })
-                          }
-                        />
+                        <Label htmlFor="credit-interest-min" className="text-xs text-muted-foreground">Minimo</Label>
+                        <Input id="credit-interest-min" type="number" step="0.1" value={formData.creditInterestMin} onChange={(e) => setFormData((current) => ({ ...current, creditInterestMin: e.target.value }))} />
                       </div>
                       <div>
-                        <Label htmlFor="credit-interest-max" className="text-xs text-muted-foreground">
-                          Máximo
-                        </Label>
-                        <Input
-                          id="credit-interest-max"
-                          type="number"
-                          step="0.1"
-                          placeholder="75.0"
-                          value={formData.creditInterestMax}
-                          onChange={(e) =>
-                            setFormData({ ...formData, creditInterestMax: e.target.value })
-                          }
-                        />
+                        <Label htmlFor="credit-interest-max" className="text-xs text-muted-foreground">Maximo</Label>
+                        <Input id="credit-interest-max" type="number" step="0.1" value={formData.creditInterestMax} onChange={(e) => setFormData((current) => ({ ...current, creditInterestMax: e.target.value }))} />
                       </div>
                     </div>
                   </div>
 
-                  {/* Límite en un pago */}
                   <div className="space-y-2">
-                    <Label>Límite de consumo en un pago ($)</Label>
+                    <Label>Limite de consumo en un pago</Label>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="single-payment-min" className="text-xs text-muted-foreground">
-                          Mínimo
-                        </Label>
-                        <Input
-                          id="single-payment-min"
-                          type="number"
-                          placeholder="10000"
-                          value={formData.singlePaymentMin}
-                          onChange={(e) =>
-                            setFormData({ ...formData, singlePaymentMin: e.target.value })
-                          }
-                        />
+                        <Label htmlFor="single-payment-min" className="text-xs text-muted-foreground">Minimo</Label>
+                        <Input id="single-payment-min" type="number" value={formData.singlePaymentMin} onChange={(e) => setFormData((current) => ({ ...current, singlePaymentMin: e.target.value }))} />
                       </div>
                       <div>
-                        <Label htmlFor="single-payment-max" className="text-xs text-muted-foreground">
-                          Máximo
-                        </Label>
-                        <Input
-                          id="single-payment-max"
-                          type="number"
-                          placeholder="200000"
-                          value={formData.singlePaymentMax}
-                          onChange={(e) =>
-                            setFormData({ ...formData, singlePaymentMax: e.target.value })
-                          }
-                        />
+                        <Label htmlFor="single-payment-max" className="text-xs text-muted-foreground">Maximo</Label>
+                        <Input id="single-payment-max" type="number" value={formData.singlePaymentMax} onChange={(e) => setFormData((current) => ({ ...current, singlePaymentMax: e.target.value }))} />
                       </div>
                     </div>
                   </div>
 
-                  {/* Límite en cuotas */}
                   <div className="space-y-2">
-                    <Label>Límite de consumo en cuotas ($)</Label>
+                    <Label>Limite de cuotas</Label>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="installment-limit-min" className="text-xs text-muted-foreground">
-                          Mínimo
-                        </Label>
-                        <Input
-                          id="installment-limit-min"
-                          type="number"
-                          placeholder="50000"
-                          value={formData.installmentLimitMin}
-                          onChange={(e) =>
-                            setFormData({ ...formData, installmentLimitMin: e.target.value })
-                          }
-                        />
+                        <Label htmlFor="installment-limit-min" className="text-xs text-muted-foreground">Minimo</Label>
+                        <Input id="installment-limit-min" type="number" value={formData.installmentLimitMin} onChange={(e) => setFormData((current) => ({ ...current, installmentLimitMin: e.target.value }))} />
                       </div>
                       <div>
-                        <Label htmlFor="installment-limit-max" className="text-xs text-muted-foreground">
-                          Máximo
-                        </Label>
-                        <Input
-                          id="installment-limit-max"
-                          type="number"
-                          placeholder="500000"
-                          value={formData.installmentLimitMax}
-                          onChange={(e) =>
-                            setFormData({ ...formData, installmentLimitMax: e.target.value })
-                          }
-                        />
+                        <Label htmlFor="installment-limit-max" className="text-xs text-muted-foreground">Maximo</Label>
+                        <Input id="installment-limit-max" type="number" value={formData.installmentLimitMax} onChange={(e) => setFormData((current) => ({ ...current, installmentLimitMax: e.target.value }))} />
                       </div>
                     </div>
                   </div>
                 </div>
-              )}
+              ) : null}
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSaving}>
                 Cancelar
               </Button>
-              <Button onClick={handleSaveProduct} disabled={!selectedType || !formData.name}>
-                {editingProduct ? "Guardar Cambios" : "Agregar Producto"}
+              <Button onClick={() => void handleSaveProduct()} disabled={!payload || isSaving}>
+                {isSaving ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {editingProduct ? "Guardar cambios" : "Agregar producto"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Lista de productos */}
-      {products.length === 0 ? (
+      {error ? (
+        <div className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+          <AlertCircle className="size-4 mt-0.5 shrink-0" />
+          <span>{error}</span>
+          <Button variant="outline" size="sm" className="ml-auto" onClick={() => {
+            setIsPageLoading(true);
+            void loadProducts();
+          }}>
+            Reintentar
+          </Button>
+        </div>
+      ) : null}
+
+      {isPageLoading ? (
+        <Card>
+          <CardContent className="flex items-center justify-center py-16 text-muted-foreground">
+            <LoaderCircle className="mr-2 h-5 w-5 animate-spin" />
+            Cargando productos...
+          </CardContent>
+        </Card>
+      ) : products.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-16">
             <div className="rounded-full bg-muted p-4 mb-4">
@@ -511,90 +469,67 @@ export default function ProductsPage() {
             </div>
             <h3 className="text-lg font-semibold mb-2">No hay productos configurados</h3>
             <p className="text-muted-foreground text-center max-w-md mb-4">
-              Comienza agregando tu primer producto financiero para que el motor de decisión
-              pueda hacer recomendaciones personalizadas
+              Crea tu primer producto para empezar a usar recomendaciones sobre oferta financiera.
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {products.map((product) => {
-            const Icon = getProductIcon(product.type);
+            const Icon = getProductIcon(product.tipo);
+
             return (
               <Card key={product.id}>
                 <CardHeader>
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <div className="rounded-lg bg-primary/10 p-2">
                         <Icon className="h-5 w-5 text-primary" />
                       </div>
                       <div>
-                        <CardTitle className="text-lg">{product.name}</CardTitle>
-                        <CardDescription>{getProductLabel(product.type)}</CardDescription>
+                        <CardTitle className="text-lg">{product.nombre}</CardTitle>
+                        <CardDescription>{getProductLabel(product.tipo)}</CardDescription>
                       </div>
                     </div>
                     <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => handleEditProduct(product)}
-                      >
+                      <Button variant="ghost" size="icon-sm" onClick={() => handleEditProduct(product)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => handleDeleteProduct(product.id)}
-                      >
+                      <Button variant="ghost" size="icon-sm" onClick={() => void handleDeleteProduct(product.id)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {product.type === "tarjeta" ? (
+                  {product.tipo === "TARJETA_CREDITO" ? (
                     <>
                       <div className="text-sm">
-                        <p className="text-muted-foreground">Tasa de interés</p>
-                        <p className="font-medium">
-                          {product.creditInterestRate?.min}% - {product.creditInterestRate?.max}%
-                        </p>
+                        <p className="text-muted-foreground">Interes</p>
+                        <p className="font-medium">{product.interesMin ?? "-"}% - {product.interesMax ?? "-"}%</p>
                       </div>
                       <div className="text-sm">
-                        <p className="text-muted-foreground">Límite un pago</p>
-                        <p className="font-medium">
-                          ${product.singlePaymentLimit?.min.toLocaleString()} - $
-                          {product.singlePaymentLimit?.max.toLocaleString()}
-                        </p>
+                        <p className="text-muted-foreground">Limite total</p>
+                        <p className="font-medium">{formatCurrency(product.limiteMontoTotalMin)} - {formatCurrency(product.limiteMontoTotalMax)}</p>
                       </div>
                       <div className="text-sm">
-                        <p className="text-muted-foreground">Límite en cuotas</p>
-                        <p className="font-medium">
-                          ${product.installmentLimit?.min.toLocaleString()} - $
-                          {product.installmentLimit?.max.toLocaleString()}
-                        </p>
+                        <p className="text-muted-foreground">Cuotas</p>
+                        <p className="font-medium">{product.limiteCuotasMin ?? "-"} - {product.limiteCuotasMax ?? "-"}</p>
                       </div>
                     </>
                   ) : (
                     <>
                       <div className="text-sm">
-                        <p className="text-muted-foreground">Tasa de interés</p>
-                        <p className="font-medium">
-                          {product.interestRate?.min}% - {product.interestRate?.max}%
-                        </p>
+                        <p className="text-muted-foreground">Tasa</p>
+                        <p className="font-medium">{product.tasaMin ?? "-"}% - {product.tasaMax ?? "-"}%</p>
                       </div>
                       <div className="text-sm">
                         <p className="text-muted-foreground">Cuotas</p>
-                        <p className="font-medium">
-                          {product.installments?.min} - {product.installments?.max} meses
-                        </p>
+                        <p className="font-medium">{product.cuotasMin ?? "-"} - {product.cuotasMax ?? "-"} meses</p>
                       </div>
                       <div className="text-sm">
                         <p className="text-muted-foreground">Monto</p>
-                        <p className="font-medium">
-                          ${product.amount?.min.toLocaleString()} - $
-                          {product.amount?.max.toLocaleString()}
-                        </p>
+                        <p className="font-medium">{formatCurrency(product.montoMin)} - {formatCurrency(product.montoMax)}</p>
                       </div>
                     </>
                   )}
