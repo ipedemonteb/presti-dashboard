@@ -4,8 +4,15 @@ import HomePage from "@/pages/home-page";
 import LoginPage from "@/pages/login-page";
 import RegisterPage from "@/pages/register-page";
 import ForgotPasswordPage from "@/pages/forgot-password-page";
-import DashboardPage from "@/pages/dashboard-page";
 import NotFoundPage from "@/pages/not-found-page";
+
+import { DashboardLayout } from "@/components/dashboard-layout";
+import AnalyticsPage from "@/pages/dashboard/analytics-page";
+import ParametersPage from "@/pages/dashboard/parameters-page";
+import SimulationsPage from "@/pages/dashboard/simulations-page";
+import PortfolioPage from "@/pages/dashboard/portfolio-page";
+import NotificationsPage from "@/pages/dashboard/notifications-page";
+import SettingsPage from "@/pages/dashboard/settings-page";
 
 export const router = createBrowserRouter([
   {
@@ -26,7 +33,33 @@ export const router = createBrowserRouter([
   },
   {
     path: "/dashboard",
-    element: <DashboardPage />,
+    element: <DashboardLayout />,
+    children: [
+      {
+        index: true,
+        element: <AnalyticsPage />,
+      },
+      {
+        path: "parameters",
+        element: <ParametersPage />,
+      },
+      {
+        path: "simulations",
+        element: <SimulationsPage />,
+      },
+      {
+        path: "portfolio",
+        element: <PortfolioPage />,
+      },
+      {
+        path: "notifications",
+        element: <NotificationsPage />,
+      },
+      {
+        path: "settings",
+        element: <SettingsPage />,
+      },
+    ],
   },
   {
     path: "*",
