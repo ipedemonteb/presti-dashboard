@@ -5,7 +5,7 @@ export function LandingFooter() {
     <footer className="border-t bg-muted/50">
       <div className="container mx-auto px-4 md:px-6 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-          <div className="space-y-4">
+          <div className="flex flex-col space-y-2">
             <span className="text-2xl font-bold">presti</span>
             <p className="text-sm text-muted-foreground">
               Motor de decisión potenciado por IA para fintechs modernas.
