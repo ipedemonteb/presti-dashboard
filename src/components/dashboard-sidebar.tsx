@@ -38,7 +38,7 @@ export function DashboardSidebar() {
       {/* User section - clickeable para colapsar */}
       <button 
         onClick={() => setCollapsed(!collapsed)}
-        className="p-4 border-b hover:bg-muted/50 transition-colors"
+        className="p-4 h-18 border-b hover:bg-muted/50 transition-colors"
       >
         <div className="flex items-center gap-3">
           <div className="flex items-center justify-center size-10 rounded-full bg-primary/10 shrink-0">
