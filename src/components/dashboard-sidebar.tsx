@@ -7,10 +7,8 @@ import {
   Bell,
   Settings,
   LogOut,
-  ChevronLeft,
   User
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -37,32 +35,23 @@ export function DashboardSidebar() {
         collapsed ? "w-20" : "w-64"
       )}
     >
-      {/* Header */}
-      <div className="flex items-center justify-center h-16 px-4 border-b">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => setCollapsed(!collapsed)}
-          className="shrink-0"
-        >
-          <ChevronLeft className={cn("size-4 transition-transform", collapsed && "rotate-180")} />
-        </Button>
-      </div>
-
-      {/* User section */}
-      <div className="p-4 border-b">
+      {/* User section - clickeable para colapsar */}
+      <button 
+        onClick={() => setCollapsed(!collapsed)}
+        className="p-4 border-b hover:bg-muted/50 transition-colors"
+      >
         <div className="flex items-center gap-3">
           <div className="flex items-center justify-center size-10 rounded-full bg-primary/10 shrink-0">
             <User className="size-5 text-primary" />
           </div>
           {!collapsed && (
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 text-left">
               <p className="text-sm font-medium truncate">Juan Pérez</p>
               <p className="text-xs text-muted-foreground truncate">Fintech S.A.</p>
             </div>
           )}
         </div>
-      </div>
+      </button>
 
       {/* Main navigation */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">

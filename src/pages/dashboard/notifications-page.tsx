@@ -106,14 +106,14 @@ export default function NotificationsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div>
             {notifications.map((notification, index) => {
               const Icon = notification.icon;
               return (
                 <div
                   key={index}
-                  className={`flex gap-4 border-b pb-4 last:border-0 last:pb-0 ${
-                    notification.unread ? "bg-muted/30 -mx-6 px-6 py-4" : ""
+                  className={`flex gap-4 border-b pb-4 last:border-0 last:pb-0 py-4 ${
+                    notification.unread ? "bg-muted/30 -mx-6 px-6" : ""
                   }`}
                 >
                   <div className={`mt-1 rounded-full p-2 h-fit ${
