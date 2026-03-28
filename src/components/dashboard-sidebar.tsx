@@ -4,7 +4,6 @@ import {
   Sliders, 
   Package, 
   FolderKanban,
-  Bell,
   Settings,
   LogOut,
   User
@@ -20,7 +19,6 @@ const navigation = [
 ];
 
 const secondaryNavigation = [
-  { name: "Notificaciones", href: "/dashboard/notifications", icon: Bell },
   { name: "Configuración", href: "/dashboard/settings", icon: Settings },
 ];
 

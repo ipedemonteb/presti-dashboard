@@ -11,7 +11,6 @@ import AnalyticsPage from "@/pages/dashboard/analytics-page";
 import ParametersPage from "@/pages/dashboard/parameters-page";
 import ProductsPage from "@/pages/dashboard/products-page";
 import PortfolioPage from "@/pages/dashboard/portfolio-page";
-import NotificationsPage from "@/pages/dashboard/notifications-page";
 import SettingsPage from "@/pages/dashboard/settings-page";
 
 export const router = createBrowserRouter([
@@ -50,10 +49,6 @@ export const router = createBrowserRouter([
       {
         path: "portfolio",
         element: <PortfolioPage />,
-      },
-      {
-        path: "notifications",
-        element: <NotificationsPage />,
       },
       {
         path: "settings",

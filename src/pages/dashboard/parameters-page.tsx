@@ -90,30 +90,6 @@ export default function ParametersPage() {
         </div>
       </div>
 
-      {/* AI Suggestion Banner */}
-      <div className="p-4 rounded-lg border bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
-        <div className="flex items-start gap-3">
-          <TrendingUp className="size-5 text-blue-600 shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <p className="font-medium text-blue-900 dark:text-blue-100">
-              Sugerencia del sistema
-            </p>
-            <p className="text-sm text-blue-700 dark:text-blue-300">
-              Basado en los últimos 30 días, recomendamos aumentar el "Peso historial crediticio" a 40% 
-              para mejorar la precisión de predicción en un 12%.
-            </p>
-            <div className="flex items-center gap-2 pt-2">
-              <Button size="sm" variant="outline" className="bg-white dark:bg-background">
-                Aplicar sugerencia
-              </Button>
-              <Button size="sm" variant="ghost">
-                Ver detalles
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Parameter Sections */}
       <div className="space-y-6">
         {parameterSections.map((section) => (
