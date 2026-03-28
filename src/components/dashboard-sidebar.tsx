@@ -2,7 +2,7 @@ import { Link, useLocation } from "react-router";
 import { 
   LayoutDashboard, 
   Sliders, 
-  FlaskConical, 
+  Package, 
   FolderKanban,
   Bell,
   Settings,
@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 const navigation = [
   { name: "Analytics", href: "/dashboard", icon: LayoutDashboard },
   { name: "Parámetros", href: "/dashboard/parameters", icon: Sliders },
-  { name: "Simulaciones", href: "/dashboard/simulations", icon: FlaskConical },
+  { name: "Productos", href: "/dashboard/products", icon: Package },
   { name: "Cartera", href: "/dashboard/portfolio", icon: FolderKanban },
 ];
 

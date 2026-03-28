@@ -9,7 +9,7 @@ import NotFoundPage from "@/pages/not-found-page";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import AnalyticsPage from "@/pages/dashboard/analytics-page";
 import ParametersPage from "@/pages/dashboard/parameters-page";
-import SimulationsPage from "@/pages/dashboard/simulations-page";
+import ProductsPage from "@/pages/dashboard/products-page";
 import PortfolioPage from "@/pages/dashboard/portfolio-page";
 import NotificationsPage from "@/pages/dashboard/notifications-page";
 import SettingsPage from "@/pages/dashboard/settings-page";
@@ -44,8 +44,8 @@ export const router = createBrowserRouter([
         element: <ParametersPage />,
       },
       {
-        path: "simulations",
-        element: <SimulationsPage />,
+        path: "products",
+        element: <ProductsPage />,
       },
       {
         path: "portfolio",
