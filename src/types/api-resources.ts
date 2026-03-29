@@ -95,8 +95,8 @@ export interface RecommendationResource {
   usuarioNombre?: string;
   nombre?: string;
   productoNombre?: string;
-  producto?: string;
-  resultado?: string;
+  producto?: string | ApiProduct | Record<string, unknown>;
+  resultado?: string | Record<string, unknown>;
   estado?: string;
   score?: number;
   confianza?: number;

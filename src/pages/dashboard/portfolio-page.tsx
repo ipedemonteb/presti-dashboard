@@ -4,7 +4,6 @@ import {
   Users, 
   TrendingUp, 
   TrendingDown, 
-  AlertTriangle, 
   CheckCircle,
   ArrowUpCircle,
   ArrowDownCircle,
@@ -114,7 +113,6 @@ export default function PortfolioPage() {
     totalClients: clientChanges.length,
     improved: clientChanges.filter(c => c.changeType === "mejora").length,
     deteriorated: clientChanges.filter(c => c.changeType === "deterioro").length,
-    noChange: clientChanges.filter(c => c.changeType === "sin_cambios").length,
   };
 
   return (
@@ -134,7 +132,7 @@ export default function PortfolioPage() {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Clientes Monitoreados</CardTitle>
@@ -172,16 +170,6 @@ export default function PortfolioPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Requieren Revisión</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.deteriorated}</div>
-            <p className="text-xs text-muted-foreground">Cambios significativos</p>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Filters */}

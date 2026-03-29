@@ -18,8 +18,57 @@ import type { ApiError } from "@/types/auth";
 import { Button } from "@/components/ui/button";
 
 function isApprovedRecommendation(item: RecommendationResource) {
-  const value = (item.estado ?? item.resultado ?? "").toLowerCase();
+  const value = (item.estado ?? getTextFromUnknown(item.resultado) ?? "").toLowerCase();
   return value.includes("aprob");
+}
+
+function getRecommendationStatus(item: RecommendationResource) {
+  const value = (item.estado ?? getTextFromUnknown(item.resultado) ?? "").toLowerCase();
+
+  if (value.includes("aprob")) return "approved";
+  if (value.includes("rech") || value.includes("deneg")) return "rejected";
+  return "pending";
+}
+
+function getRecommendationClient(item: RecommendationResource) {
+  return item.usuarioNombre ?? item.nombre ?? item.usuarioCuil ?? "Cliente sin identificar";
+}
+
+function getTextFromUnknown(value: unknown) {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+
+    if (typeof record.nombre === "string") {
+      return record.nombre;
+    }
+
+    if (typeof record.productoNombre === "string") {
+      return record.productoNombre;
+    }
+
+    if (typeof record.resultado === "string") {
+      return record.resultado;
+    }
+
+    if (typeof record.id === "string") {
+      return `Producto ${record.id}`;
+    }
+  }
+
+  return null;
+}
+
+function getRecommendationLabel(item: RecommendationResource) {
+  return (
+    item.productoNombre ??
+    getTextFromUnknown(item.producto) ??
+    getTextFromUnknown(item.resultado) ??
+    "Recomendacion generada"
+  );
 }
 
 export default function AnalyticsPage() {
@@ -164,9 +213,10 @@ export default function AnalyticsPage() {
       monitored: portfolioSnapshot.length,
       improved,
       deteriorated,
-      review: deteriorated,
     };
   }, [portfolioSnapshot]);
+
+  const recentRecommendations = useMemo(() => recommendations.slice(0, 5), [recommendations]);
 
   return (
     <div className="p-8 space-y-8">
@@ -223,35 +273,64 @@ export default function AnalyticsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 rounded-lg border bg-card">
               <div className="p-6 border-b">
-                <h2 className="text-xl font-semibold">Movimientos de cartera</h2>
+                <h2 className="text-xl font-semibold">Recomendaciones recientes</h2>
               </div>
               <div className="p-6">
-                <div className="space-y-4">
-                  {portfolioSnapshot.map((client) => (
-                    <div key={client.id} className="flex items-start gap-4 p-4 rounded-lg border hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center justify-center size-10 rounded-full bg-primary/10 shrink-0">
-                        <Users className="size-5 text-primary" />
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <p className="font-medium">{client.cliente}</p>
-                            <p className="text-sm text-muted-foreground">DNI: {client.documento}</p>
+                {recentRecommendations.length === 0 ? (
+                  <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+                    Todavia no hay recomendaciones recientes para mostrar.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {recentRecommendations.map((recommendation, index) => {
+                      const status = getRecommendationStatus(recommendation);
+
+                      return (
+                        <div
+                          key={recommendation.id ?? `${recommendation.usuarioCuil ?? "rec"}-${index}`}
+                          className="flex items-start gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50"
+                        >
+                          <div className="flex items-center justify-center size-10 rounded-full bg-primary/10 shrink-0">
+                            <Users className="size-5 text-primary" />
                           </div>
-                          <span className={`text-xs px-2 py-1 rounded-full ${client.estado === "mejora" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                            {client.estado === "mejora" ? "Mejora" : "Deterioro"}
-                          </span>
+                          <div className="flex-1 space-y-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <p className="font-medium">{getRecommendationClient(recommendation)}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  CUIL: {recommendation.usuarioCuil ?? "Sin dato"}
+                                </p>
+                              </div>
+                              <span
+                                className={`text-xs px-2 py-1 rounded-full ${
+                                  status === "approved"
+                                    ? "bg-green-100 text-green-700"
+                                    : status === "rejected"
+                                      ? "bg-red-100 text-red-700"
+                                      : "bg-yellow-100 text-yellow-700"
+                                }`}
+                              >
+                                {status === "approved"
+                                  ? "Aprobado"
+                                  : status === "rejected"
+                                    ? "Rechazado"
+                                    : "Pendiente"}
+                              </span>
+                            </div>
+                            <p className="text-sm font-medium text-primary">
+                              {getRecommendationLabel(recommendation)}
+                            </p>
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                              <span>
+                                Confianza: {recommendation.confianza ?? recommendation.score ?? "Sin dato"}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <p className={`text-sm font-medium ${client.estado === "mejora" ? "text-green-700" : "text-red-700"}`}>
-                          Variacion: {client.variacion}
-                        </p>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span>{client.detalle}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -285,15 +364,6 @@ export default function AnalyticsPage() {
                       <p className="text-2xl font-bold text-red-600">{portfolioMetrics.deteriorated}</p>
                     </div>
                     <ArrowDownCircle className="size-5 text-red-600" />
-                  </div>
-                </div>
-                <div className="rounded-lg border p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Para revision</p>
-                      <p className="text-2xl font-bold text-yellow-600">{portfolioMetrics.review}</p>
-                    </div>
-                    <CheckCircle2 className="size-5 text-yellow-600" />
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
