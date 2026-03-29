@@ -30,10 +30,6 @@ function getRecommendationStatus(item: RecommendationResource) {
   return "pending";
 }
 
-function getRecommendationClient(item: RecommendationResource) {
-  return item.usuarioNombre ?? item.nombre ?? item.usuarioCuil ?? "Cliente sin identificar";
-}
-
 function getTextFromUnknown(value: unknown) {
   if (typeof value === "string") {
     return value;
@@ -288,19 +284,16 @@ export default function AnalyticsPage() {
                       return (
                         <div
                           key={recommendation.id ?? `${recommendation.usuarioCuil ?? "rec"}-${index}`}
-                          className="flex items-start gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50"
+                          className="flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50"
                         >
                           <div className="flex items-center justify-center size-10 rounded-full bg-primary/10 shrink-0">
                             <Users className="size-5 text-primary" />
                           </div>
-                          <div className="flex-1 space-y-1">
+                          <div className="flex-1">
                             <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <p className="font-medium">{getRecommendationClient(recommendation)}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  CUIL: {recommendation.usuarioCuil ?? "Sin dato"}
-                                </p>
-                              </div>
+                              <p className="font-medium text-primary">
+                                {getRecommendationLabel(recommendation)}
+                              </p>
                               <span
                                 className={`text-xs px-2 py-1 rounded-full ${
                                   status === "approved"
@@ -315,14 +308,6 @@ export default function AnalyticsPage() {
                                   : status === "rejected"
                                     ? "Rechazado"
                                     : "Pendiente"}
-                              </span>
-                            </div>
-                            <p className="text-sm font-medium text-primary">
-                              {getRecommendationLabel(recommendation)}
-                            </p>
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                              <span>
-                                Confianza: {recommendation.confianza ?? recommendation.score ?? "Sin dato"}
                               </span>
                             </div>
                           </div>
