@@ -81,6 +81,13 @@ export interface DailyUsage {
   limiteDiario?: number;
 }
 
+export interface CreditPolicy {
+  maxSituacionCrediticiaPermitida: number;
+  maxEntidadesConDeuda: number;
+  maxDeudaTotalExterna: number;
+  mesesHistorialLimpioRequerido: number;
+}
+
 export interface ApiUserResource {
   id?: string;
   cuil?: string;

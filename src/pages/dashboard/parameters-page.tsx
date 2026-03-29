@@ -1,22 +1,17 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { AlertCircle, Pencil, Save, X } from "lucide-react";
+import { dashboardService } from "@/lib/dashboard-service";
+import type { CreditPolicy } from "@/types/api-resources";
+import type { ApiError } from "@/types/auth";
 
 type PolicyForm = {
   maxSituacionCrediticiaPermitida: string;
   maxEntidadesConDeuda: string;
   maxDeudaTotalExterna: string;
   mesesHistorialLimpioRequerido: string;
-  permitirDeudaIrregularVigente: string;
 };
 
 const initialPolicyForm: PolicyForm = {
@@ -24,16 +19,59 @@ const initialPolicyForm: PolicyForm = {
   maxEntidadesConDeuda: "3",
   maxDeudaTotalExterna: "350000",
   mesesHistorialLimpioRequerido: "6",
-  permitirDeudaIrregularVigente: "no",
 };
+
+function mapPolicyToForm(policy: CreditPolicy): PolicyForm {
+  return {
+    maxSituacionCrediticiaPermitida: String(policy.maxSituacionCrediticiaPermitida),
+    maxEntidadesConDeuda: String(policy.maxEntidadesConDeuda),
+    maxDeudaTotalExterna: String(policy.maxDeudaTotalExterna),
+    mesesHistorialLimpioRequerido: String(policy.mesesHistorialLimpioRequerido),
+  };
+}
+
+function mapFormToPolicy(form: PolicyForm): CreditPolicy {
+  return {
+    maxSituacionCrediticiaPermitida: Number(form.maxSituacionCrediticiaPermitida),
+    maxEntidadesConDeuda: Number(form.maxEntidadesConDeuda),
+    maxDeudaTotalExterna: Number(form.maxDeudaTotalExterna),
+    mesesHistorialLimpioRequerido: Number(form.mesesHistorialLimpioRequerido),
+  };
+}
 
 export default function ParametersPage() {
   const [modified, setModified] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [policyForm, setPolicyForm] = useState<PolicyForm>(initialPolicyForm);
+  const [savedPolicy, setSavedPolicy] = useState<PolicyForm>(initialPolicyForm);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const loadPolicy = async () => {
+      try {
+        setError("");
+        const response = await dashboardService.getCreditPolicy();
+
+        if (response) {
+          const mapped = mapPolicyToForm(response);
+          setPolicyForm(mapped);
+          setSavedPolicy(mapped);
+        }
+      } catch (err) {
+        const apiError = (err as { response?: { data?: ApiError } }).response?.data;
+        setError(apiError?.message ?? "No pudimos cargar la politica crediticia.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadPolicy();
+  }, []);
 
   const handleCancel = () => {
-    setPolicyForm(initialPolicyForm);
+    setPolicyForm(savedPolicy);
     setModified(false);
     setIsEditing(false);
   };
@@ -43,23 +81,56 @@ export default function ParametersPage() {
     setModified(true);
   };
 
-  const recentChanges = [
-    {
-      parameter: "Situacion crediticia maxima permitida",
-      value: `<= ${policyForm.maxSituacionCrediticiaPermitida}`,
-      note: "Define el umbral principal de entrada al motor de decision.",
-    },
-    {
-      parameter: "Meses de historial limpio requeridos",
-      value: `${policyForm.mesesHistorialLimpioRequerido} meses`,
-      note: "Asegura consistencia y no solo una foto puntual del cliente.",
-    },
-    {
-      parameter: "Deuda irregular vigente",
-      value: policyForm.permitirDeudaIrregularVigente === "si" ? "Permitida" : "No permitida",
-      note: "Regla binaria de descarte rapido para automatizacion.",
-    },
-  ];
+  const recentChanges = useMemo(
+    () => [
+      {
+        parameter: "Situacion crediticia maxima permitida",
+        value: `<= ${policyForm.maxSituacionCrediticiaPermitida}`,
+        note: "Define el umbral principal de entrada al motor de decision.",
+      },
+      {
+        parameter: "Maximo de entidades con deuda",
+        value: policyForm.maxEntidadesConDeuda,
+        note: "Controla el sobreendeudamiento distribuido entre distintas entidades.",
+      },
+      {
+        parameter: "Deuda total externa maxima",
+        value: `ARS ${Number(policyForm.maxDeudaTotalExterna).toLocaleString("es-AR")}`,
+        note: "Excluye perfiles con deuda total superior al umbral definido.",
+      },
+      {
+        parameter: "Meses de historial limpio requeridos",
+        value: `${policyForm.mesesHistorialLimpioRequerido} meses`,
+        note: "Asegura consistencia y no solo una foto puntual del cliente.",
+      },
+    ],
+    [policyForm]
+  );
+
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      setError("");
+      const payload = mapFormToPolicy(policyForm);
+      const updated = await dashboardService.updateCreditPolicy(payload);
+
+      if (updated) {
+        const mapped = mapPolicyToForm(updated);
+        setPolicyForm(mapped);
+        setSavedPolicy(mapped);
+      } else {
+        setSavedPolicy(policyForm);
+      }
+
+      setModified(false);
+      setIsEditing(false);
+    } catch (err) {
+      const apiError = (err as { response?: { data?: ApiError } }).response?.data;
+      setError(apiError?.message ?? "No pudimos guardar la politica crediticia.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="p-8 space-y-8">
@@ -75,6 +146,20 @@ export default function ParametersPage() {
           Editar
         </Button>
       </div>
+
+      {error ? (
+        <div className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+          <AlertCircle className="size-4 mt-0.5 shrink-0" />
+          <span>{error}</span>
+        </div>
+      ) : null}
+
+      {isLoading ? (
+        <div className="rounded-lg border bg-card p-8 text-sm text-muted-foreground">
+          Cargando politica crediticia...
+        </div>
+      ) : (
+        <>
 
       <div className="space-y-6">
         <div className="rounded-lg border bg-card">
@@ -105,31 +190,6 @@ export default function ParametersPage() {
                 />
                 <p className="text-xs text-muted-foreground">
                   Regla principal del motor. Ejemplo: operar solo con situacion menor o igual a 2.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="deuda-irregular">Permitir deuda irregular vigente</Label>
-                  <button className="text-muted-foreground hover:text-foreground" title="Si el cliente hoy tiene deuda en mora o irregular, esta regla define si puede seguir evaluandose o no.">
-                    <AlertCircle className="size-4" />
-                  </button>
-                </div>
-                <Select
-                  value={policyForm.permitirDeudaIrregularVigente}
-                  onValueChange={(value) => handleFieldChange("permitirDeudaIrregularVigente", value)}
-                  disabled={!isEditing}
-                >
-                  <SelectTrigger id="deuda-irregular">
-                    <SelectValue placeholder="Selecciona una politica" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="no">No permitir</SelectItem>
-                    <SelectItem value="si">Permitir</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Regla binaria para automatizar rechazo inmediato ante deuda irregular actual.
                 </p>
               </div>
 
@@ -246,19 +306,18 @@ export default function ParametersPage() {
                 Cancelar
               </Button>
               <Button
-                disabled={!modified}
-                onClick={() => {
-                  setModified(false);
-                  setIsEditing(false);
-                }}
+                disabled={!modified || isSaving}
+                onClick={() => void handleSave()}
               >
                 <Save className="size-4 mr-2" />
-                Guardar cambios
+                {isSaving ? "Guardando..." : "Guardar cambios"}
               </Button>
             </div>
           ) : null}
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

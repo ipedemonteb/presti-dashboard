@@ -1,6 +1,7 @@
 import { api } from "@/lib/api";
 import { extractArray, extractObject } from "@/lib/api-helpers";
 import type {
+  CreditPolicy,
   ActiveSubscription,
   ApiKeyResource,
   ApiProduct,
@@ -81,5 +82,15 @@ export const dashboardService = {
   async getUsageToday() {
     const response = await api.get("/v1/suscripciones/uso");
     return extractObject<DailyUsage>(response.data);
+  },
+
+  async getCreditPolicy() {
+    const response = await api.get("/v1/politica-crediticia");
+    return extractObject<CreditPolicy>(response.data);
+  },
+
+  async updateCreditPolicy(data: CreditPolicy) {
+    const response = await api.patch("/v1/politica-crediticia", data);
+    return extractObject<CreditPolicy>(response.data);
   },
 };
