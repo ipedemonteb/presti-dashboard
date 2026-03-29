@@ -24,7 +24,7 @@ export function LandingHero() {
         <div className="flex flex-col sm:flex-row items-center gap-4 pt-4">
           <Button size="lg" className="gap-2" asChild>
             <Link to="/register">
-              Prueba Gratuita
+              Crear cuenta
               <ArrowRight className="size-4" />
             </Link>
           </Button>

@@ -5,53 +5,44 @@ import { Link } from "react-router";
 export function LandingPricing() {
   const plans = [
     {
-      name: "Inicial",
-      price: "$499",
-      description: "Para equipos que empiezan a ordenar su operacion crediticia",
+      name: "Pro",
+      price: "USD 299",
+      description: "Para fintechs chicas o equipos que estan validando el producto con un volumen acotado.",
       features: [
-        "Hasta 1,000 consultas/mes",
-        "Dashboard de analytics",
-        "Recomendaciones recientes",
-        "Acceso estandar a API",
-        "Soporte por email",
-        "2 miembros del equipo",
-        "Gestion de cartera basica"
+        "Hasta 5.000 evaluaciones incluidas por mes",
+        "Suscripcion mensual fija",
+        "Acceso a funciones principales de la plataforma",
+        "Cargo variable por consultas excedentes",
+        "Pensado para validar el producto con bajo volumen"
       ],
-      cta: "Prueba Gratuita",
+      cta: "Crear cuenta",
       link: "/register"
     },
     {
-      name: "Crecimiento",
-      price: "$1,499",
-      description: "Pensado para fintechs con mayor volumen y mas configuracion",
+      name: "Business",
+      price: "USD 1.090",
+      description: "Para empresas en crecimiento con mayor volumen operativo y necesidad de profundizar analitica y monitoreo.",
       features: [
-        "Hasta 10,000 consultas/mes",
-        "Analitica operativa ampliada",
-        "Acceso completo a API",
-        "Soporte prioritario",
-        "10 miembros del equipo",
-        "Politica crediticia configurable",
-        "Gestion de productos",
-        "Acceso API"
+        "Mayor volumen incluido que el plan Pro",
+        "Costo marginal mas bajo por consulta adicional",
+        "Orientado a empresas en crecimiento",
+        "Mayor profundidad de analitica, simulacion y monitoreo"
       ],
-      cta: "Prueba Gratuita",
+      cta: "Crear cuenta",
       link: "/register",
       popular: true
     },
     {
       name: "Enterprise",
-      price: "Personalizado",
-      description: "Para operaciones con requerimientos de integracion y volumen dedicados",
+      price: "Desde USD 3.000",
+      description: "Para clientes de gran escala o con integraciones criticas dentro del flujo de originacion.",
       features: [
-        "Consultas ilimitadas",
-        "Integraciones dedicadas",
-        "Configuracion operativa avanzada",
-        "Acceso premium a datos",
+        "Altos volumenes incluidos y pricing por volumen",
+        "Condiciones comerciales personalizadas",
+        "Integraciones criticas dentro del flujo de originacion",
         "Soporte dedicado",
-        "Miembros ilimitados",
-        "Integraciones personalizadas",
-        "Monitoreo avanzado",
-        "Acuerdos de servicio"
+        "Acuerdos de nivel de servicio",
+        "Precios definidos segun necesidad del cliente"
       ],
       cta: "Contactar Ventas",
       link: "#"
@@ -62,10 +53,13 @@ export function LandingPricing() {
     <section id="pricing" className="container mx-auto px-4 md:px-6 py-20 md:py-32 scroll-mt-16">
       <div className="flex flex-col items-center text-center space-y-4 mb-16">
         <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
-          Planes para cada etapa operativa
+          Pricing alineado al valor que genera tu operacion
         </h2>
         <p className="text-lg text-muted-foreground max-w-2xl">
-          Elige el nivel de acceso que mejor acompane tu volumen, tu equipo y tu nivel de integracion.
+          La propuesta combina una suscripcion mensual por acceso a la infraestructura de decision y un componente variable segun uso de la API.
+        </p>
+        <p className="text-sm text-muted-foreground max-w-3xl">
+          La suscripcion cubre dashboard, reglas de negocio, parametrizacion del motor, simulacion y seguimiento de cartera. El uso variable acompaña el crecimiento de evaluaciones y consultas en produccion.
         </p>
       </div>
 
@@ -87,7 +81,7 @@ export function LandingPricing() {
               <h3 className="text-2xl font-bold">{plan.name}</h3>
               <div className="flex items-baseline gap-1">
                 <span className="text-4xl font-bold">{plan.price}</span>
-                {plan.price !== "Personalizado" && <span className="text-muted-foreground">/mes</span>}
+                {plan.name !== "Enterprise" && <span className="text-muted-foreground">/mes</span>}
               </div>
               <p className="text-sm text-muted-foreground">{plan.description}</p>
             </div>
@@ -115,6 +109,10 @@ export function LandingPricing() {
             </Button>
           </div>
         ))}
+      </div>
+
+      <div className="mx-auto mt-10 max-w-4xl rounded-lg border bg-card px-6 py-5 text-sm text-muted-foreground">
+        Cada plan incluye una base mensual por acceso a plataforma y un cargo adicional por excedente de evaluaciones. Esto permite una barrera de entrada razonable para equipos chicos y una captura de valor creciente cuando presti se vuelve parte central de la operatoria.
       </div>
     </section>
   );
