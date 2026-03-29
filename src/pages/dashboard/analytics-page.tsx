@@ -66,25 +66,44 @@ export default function AnalyticsPage() {
   ];
 
   const loadData = async () => {
-    try {
-      setError("");
-      const [usersData, productsData, recommendationsData, usageData] = await Promise.all([
-        dashboardService.getUsers(),
-        dashboardService.getProducts(),
-        dashboardService.getRecommendations(),
-        dashboardService.getUsageToday(),
-      ]);
+    setError("");
 
-      setUsers(usersData);
-      setProducts(productsData);
-      setRecommendations(recommendationsData);
-      setUsage(usageData);
-    } catch (err) {
-      const apiError = (err as { response?: { data?: ApiError } }).response?.data;
-      setError(apiError?.message ?? "No pudimos cargar las metricas del dashboard.");
-    } finally {
-      setIsLoading(false);
+    const [usersResult, productsResult, recommendationsResult, usageResult] = await Promise.allSettled([
+      dashboardService.getUsers(),
+      dashboardService.getProducts(),
+      dashboardService.getRecommendations(),
+      dashboardService.getUsageToday(),
+    ]);
+
+    if (usersResult.status === "fulfilled") {
+      setUsers(usersResult.value);
     }
+
+    if (productsResult.status === "fulfilled") {
+      setProducts(productsResult.value);
+    }
+
+    if (recommendationsResult.status === "fulfilled") {
+      setRecommendations(recommendationsResult.value);
+    } else {
+      setRecommendations([]);
+    }
+
+    if (usageResult.status === "fulfilled") {
+      setUsage(usageResult.value);
+    }
+
+    const failures = [usersResult, productsResult, usageResult].filter(
+      (result) => result.status === "rejected"
+    );
+
+    if (failures.length > 0) {
+      const firstError = failures[0] as PromiseRejectedResult;
+      const apiError = (firstError.reason as { response?: { data?: ApiError } })?.response?.data;
+      setError(apiError?.message ?? "No pudimos cargar parte de las metricas del dashboard.");
+    }
+
+    setIsLoading(false);
   };
 
   useEffect(() => {

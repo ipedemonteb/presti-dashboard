@@ -37,8 +37,15 @@ export const dashboardService = {
     return extractArray<ApiUserResource>(response.data);
   },
 
-  async getRecommendations() {
-    const response = await api.get("/v1/recomendaciones");
+  async getRecommendations(desde?: string) {
+    const fallbackDate = new Date();
+    fallbackDate.setDate(fallbackDate.getDate() - 30);
+
+    const response = await api.get("/v1/recomendaciones", {
+      params: {
+        desde: desde ?? fallbackDate.toISOString(),
+      },
+    });
     return extractArray<RecommendationResource>(response.data);
   },
 
