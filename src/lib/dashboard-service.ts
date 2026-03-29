@@ -8,6 +8,8 @@ import type {
   ApiUserResource,
   CreateProductDto,
   DailyUsage,
+  PortfolioChangeResource,
+  PortfolioSizeResource,
   RecommendationResource,
   SubscriptionPlan,
   UpdateProductDto,
@@ -92,5 +94,19 @@ export const dashboardService = {
   async updateCreditPolicy(data: CreditPolicy) {
     const response = await api.patch("/v1/politica-crediticia", data);
     return extractObject<CreditPolicy>(response.data);
+  },
+
+  async getPortfolio(months = 1) {
+    const response = await api.get("/v1/portfolio", {
+      params: {
+        meses: months,
+      },
+    });
+    return extractArray<PortfolioChangeResource>(response.data);
+  },
+
+  async getPortfolioSize() {
+    const response = await api.get("/v1/portfolio/tamanio");
+    return extractObject<PortfolioSizeResource>(response.data);
   },
 };

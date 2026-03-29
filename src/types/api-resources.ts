@@ -110,3 +110,32 @@ export interface RecommendationResource {
   confianza?: number;
   createdAt?: string;
 }
+
+export interface PortfolioChangeResource {
+  id?: string;
+  cuil?: string;
+  dni?: string;
+  nombre?: string;
+  usuarioNombre?: string;
+  usuario?: ApiUserResource | Record<string, unknown>;
+  situacionAnterior?: number | string;
+  situacionActual?: number | string;
+  situacionNueva?: number | string;
+  scoreAnterior?: number;
+  scoreActual?: number;
+  changeType?: string;
+  tipoCambio?: string;
+  detalle?: string;
+  descripcion?: string;
+  motivo?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  fechaCambio?: string;
+  detectadoAt?: string;
+}
+
+export interface PortfolioSizeResource {
+  total?: number;
+  tamanio?: number;
+  cantidad?: number;
+}
