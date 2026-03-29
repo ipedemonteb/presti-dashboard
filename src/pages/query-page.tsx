@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import { AlertCircle, CheckCircle2, LoaderCircle, Search, UserRound } from "lucide-react";
+import { AlertCircle, CheckCircle2, CreditCard, DollarSign, LoaderCircle, Search, Wallet } from "lucide-react";
 import { dashboardService } from "@/lib/dashboard-service";
-import type { RecommendationResource } from "@/types/api-resources";
+import type { ApiProduct, RecommendationResource } from "@/types/api-resources";
 import type { ApiError } from "@/types/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,30 +39,39 @@ function getRecommendationTitle(item: RecommendationResource) {
   return item.productoNombre ?? getTextFromUnknown(item.producto) ?? getTextFromUnknown(item.resultado) ?? "Recomendacion generada";
 }
 
-function getRecommendationClient(item: RecommendationResource) {
-  const nestedName = item.usuario && typeof item.usuario === "object" ? getTextFromUnknown(item.usuario) : null;
-  return item.usuarioNombre ?? item.nombre ?? nestedName ?? item.usuarioCuil ?? "Cliente sin identificar";
-}
-
-function getRecommendationCuil(item: RecommendationResource) {
-  if (item.usuarioCuil) return item.usuarioCuil;
-
-  if (item.usuario && typeof item.usuario === "object") {
-    const nestedUser = item.usuario as Record<string, unknown>;
-    if (typeof nestedUser.cuil === "string") {
-      return nestedUser.cuil;
-    }
-  }
-
-  return null;
-}
-
 function sortRecommendationsByDate(items: RecommendationResource[]) {
   return [...items].sort((a, b) => {
     const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
     const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
     return bTime - aTime;
   });
+}
+
+function getProductFromRecommendation(item: RecommendationResource) {
+  return item.producto && typeof item.producto === "object" ? (item.producto as ApiProduct) : null;
+}
+
+function formatCurrency(value?: number | null) {
+  if (typeof value !== "number") return "-";
+  return new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function getProductTypeLabel(product?: ApiProduct | null) {
+  if (!product) return "Producto";
+  if (product.tipo === "MICROPRESTAMO") return "Microprestamo";
+  if (product.tipo === "TARJETA_CREDITO") return "Tarjeta de credito";
+  return "Prestamo";
+}
+
+function getProductIcon(product?: ApiProduct | null) {
+  if (!product) return DollarSign;
+  if (product.tipo === "MICROPRESTAMO") return Wallet;
+  if (product.tipo === "TARJETA_CREDITO") return CreditCard;
+  return DollarSign;
 }
 
 export default function QueryPage() {
@@ -100,18 +109,13 @@ export default function QueryPage() {
 
     try {
       await dashboardService.createRecommendation(normalizedCuil);
-
-      const recommendations = await dashboardService.getRecommendations(requestStartedAt);
+      const recommendations = await dashboardService.getRecommendations(requestStartedAt, normalizedCuil);
       const sortedRecommendations = sortRecommendationsByDate(recommendations);
-      const filteredByCuil = sortedRecommendations.filter(
-        (item) => getRecommendationCuil(item) === normalizedCuil
-      );
-      const matchedRecommendations = filteredByCuil.length > 0 ? filteredByCuil : sortedRecommendations;
 
       setSearchedCuil(normalizedCuil);
-      setResults(matchedRecommendations.slice(0, 5));
+      setResults(sortedRecommendations.slice(0, 5));
 
-      if (matchedRecommendations.length === 0) {
+      if (sortedRecommendations.length === 0) {
         setError("La consulta se ejecuto, pero todavia no devolvio recomendaciones visibles.");
       }
     } catch (err) {
@@ -128,7 +132,7 @@ export default function QueryPage() {
         <div>
           <h1 className="text-3xl font-bold mb-2">Query</h1>
           <p className="text-muted-foreground max-w-2xl">
-            Consulta una recomendacion puntual por CUIL y revisa el resultado devuelto por la API en un formato simple.
+            Consulta una recomendacion puntual por CUIL y revisa el resultado devuelto por la API.
           </p>
         </div>
 
@@ -200,30 +204,56 @@ export default function QueryPage() {
               <div className="space-y-4">
                 {results.map((item, index) => {
                   const status = getRecommendationStatus(item);
+                  const product = getProductFromRecommendation(item);
+                  const ProductIcon = getProductIcon(product);
 
                   return (
                     <div key={item.id ?? `${searchedCuil}-${index}`} className="rounded-xl border p-5 transition-colors hover:bg-muted/40">
                       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                           <div className="flex items-center gap-3">
                             <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
-                              <UserRound className="size-5 text-primary" />
+                              <ProductIcon className="size-5 text-primary" />
                             </div>
                             <div>
-                              <p className="font-semibold">{getRecommendationClient(item)}</p>
-                              <p className="text-sm text-muted-foreground">CUIL: {getRecommendationCuil(item) ?? searchedCuil}</p>
+                              <p className="font-semibold">{getRecommendationTitle(item)}</p>
+                              <p className="text-sm text-muted-foreground">{getProductTypeLabel(product)}</p>
                             </div>
                           </div>
 
-                          <div>
-                            <p className="text-sm text-muted-foreground">Producto / recomendacion</p>
-                            <p className="text-base font-medium text-primary">{getRecommendationTitle(item)}</p>
-                          </div>
-
-                          <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                            <span>Confianza: {item.confianza ?? item.score ?? "Sin dato"}</span>
-                            <span>Estado API: {item.estado ?? "Sin dato"}</span>
-                          </div>
+                          {product ? (
+                            product.tipo === "TARJETA_CREDITO" ? (
+                              <div className="grid gap-8 text-sm text-muted-foreground md:grid-cols-3">
+                                <div>
+                                  <p className="text-xs uppercase tracking-wide">Interes</p>
+                                  <p className="mt-1 text-foreground">{product.interesMin ?? "-"}% - {product.interesMax ?? "-"}%</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs uppercase tracking-wide">Limite total</p>
+                                  <p className="mt-1 text-foreground">{formatCurrency(product.limiteMontoTotalMin)} - {formatCurrency(product.limiteMontoTotalMax)}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs uppercase tracking-wide">Cuotas</p>
+                                  <p className="mt-1 text-foreground">{product.limiteCuotasMin ?? "-"} - {product.limiteCuotasMax ?? "-"}</p>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="grid gap-8 text-sm text-muted-foreground md:grid-cols-3">
+                                <div>
+                                  <p className="text-xs uppercase tracking-wide">Tasa</p>
+                                  <p className="mt-1 text-foreground">{product.tasaMin ?? "-"}% - {product.tasaMax ?? "-"}%</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs uppercase tracking-wide">Monto</p>
+                                  <p className="mt-1 text-foreground">{formatCurrency(product.montoMin)} - {formatCurrency(product.montoMax)}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs uppercase tracking-wide">Cuotas</p>
+                                  <p className="mt-1 text-foreground">{product.cuotasMin ?? "-"} - {product.cuotasMax ?? "-"}</p>
+                                </div>
+                              </div>
+                            )
+                          ) : null}
                         </div>
 
                         <div>
