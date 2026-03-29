@@ -30,7 +30,6 @@ function getPlanName(plan?: ActiveSubscription | SubscriptionPlan | null) {
 export default function SettingsPage() {
   const { user } = useAuth();
   const [apiKeys, setApiKeys] = useState<ApiKeyResource[]>([]);
-  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [activeSubscription, setActiveSubscription] = useState<ActiveSubscription | null>(null);
   const [usage, setUsage] = useState<DailyUsage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -40,15 +39,13 @@ export default function SettingsPage() {
   const loadSettingsData = async () => {
     try {
       setError("");
-      const [apiKeysData, plansData, activeData, usageData] = await Promise.all([
+      const [apiKeysData, activeData, usageData] = await Promise.all([
         dashboardService.getApiKeys(),
-        dashboardService.getPlans(),
         dashboardService.getActiveSubscription(),
         dashboardService.getUsageToday(),
       ]);
 
       setApiKeys(apiKeysData);
-      setPlans(plansData);
       setActiveSubscription(activeData);
       setUsage(usageData);
     } catch (err) {
