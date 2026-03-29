@@ -7,14 +7,15 @@ export function LandingPricing() {
     {
       name: "Inicial",
       price: "$499",
-      description: "Perfecto para fintechs en etapa temprana",
+      description: "Para equipos que empiezan a ordenar su operacion crediticia",
       features: [
         "Hasta 1,000 consultas/mes",
-        "Recomendaciones IA básicas",
-        "Acceso estándar a base de datos",
+        "Dashboard de analytics",
+        "Recomendaciones recientes",
+        "Acceso estandar a API",
         "Soporte por email",
         "2 miembros del equipo",
-        "Gestión de cartera básica"
+        "Gestion de cartera basica"
       ],
       cta: "Prueba Gratuita",
       link: "/register"
@@ -22,15 +23,15 @@ export function LandingPricing() {
     {
       name: "Crecimiento",
       price: "$1,499",
-      description: "Ideal para operaciones en expansión",
+      description: "Pensado para fintechs con mayor volumen y mas configuracion",
       features: [
         "Hasta 10,000 consultas/mes",
-        "Analítica IA avanzada",
-        "Acceso completo a base de datos",
+        "Analitica operativa ampliada",
+        "Acceso completo a API",
         "Soporte prioritario",
         "10 miembros del equipo",
-        "Parámetros personalizables",
-        "Simulación de escenarios",
+        "Politica crediticia configurable",
+        "Gestion de productos",
         "Acceso API"
       ],
       cta: "Prueba Gratuita",
@@ -40,17 +41,17 @@ export function LandingPricing() {
     {
       name: "Enterprise",
       price: "Personalizado",
-      description: "Para operaciones de préstamo a gran escala",
+      description: "Para operaciones con requerimientos de integracion y volumen dedicados",
       features: [
         "Consultas ilimitadas",
-        "Solución white-label",
-        "Modelos IA dedicados",
+        "Integraciones dedicadas",
+        "Configuracion operativa avanzada",
         "Acceso premium a datos",
-        "Soporte 24/7 dedicado",
+        "Soporte dedicado",
         "Miembros ilimitados",
         "Integraciones personalizadas",
         "Monitoreo avanzado",
-        "Garantía SLA"
+        "Acuerdos de servicio"
       ],
       cta: "Contactar Ventas",
       link: "#"
@@ -61,10 +62,10 @@ export function LandingPricing() {
     <section id="pricing" className="container mx-auto px-4 md:px-6 py-20 md:py-32 scroll-mt-16">
       <div className="flex flex-col items-center text-center space-y-4 mb-16">
         <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
-          Precios Simples y Transparentes
+          Planes para cada etapa operativa
         </h2>
         <p className="text-lg text-muted-foreground max-w-2xl">
-          Elige el plan que se ajuste a tus necesidades. Todos los planes incluyen 14 días de prueba gratuita.
+          Elige el nivel de acceso que mejor acompane tu volumen, tu equipo y tu nivel de integracion.
         </p>
       </div>
 

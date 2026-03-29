@@ -8,7 +8,7 @@ export function LandingFooter() {
           <div className="flex flex-col space-y-2">
             <span className="text-2xl font-bold">presti</span>
             <p className="text-sm text-muted-foreground">
-              Motor de decisión potenciado por IA para fintechs modernas.
+              Decision crediticia, productos y cartera en una sola plataforma para fintechs.
             </p>
           </div>
 
@@ -17,8 +17,8 @@ export function LandingFooter() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><a href="#features" className="hover:text-foreground transition-colors">Funcionalidades</a></li>
               <li><a href="#pricing" className="hover:text-foreground transition-colors">Precios</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors">API</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors">Integraciones</a></li>
+              <li><a href="https://presti-api-aszg.onrender.com/api/docs" className="hover:text-foreground transition-colors">API</a></li>
+              <li><a href="/register" className="hover:text-foreground transition-colors">Comenzar</a></li>
             </ul>
           </div>
 
@@ -26,9 +26,9 @@ export function LandingFooter() {
             <h4 className="font-semibold">Empresa</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><a href="#about" className="hover:text-foreground transition-colors">Nosotros</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors">Carreras</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors">Blog</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors">Contacto</a></li>
+              <li><a href="/login" className="hover:text-foreground transition-colors">Ingresar</a></li>
+              <li><a href="/register" className="hover:text-foreground transition-colors">Crear cuenta</a></li>
+              <li><a href="mailto:hola@presti.ai" className="hover:text-foreground transition-colors">Contacto</a></li>
             </ul>
           </div>
 
@@ -36,7 +36,7 @@ export function LandingFooter() {
             <h4 className="font-semibold">Recursos</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><a href="#" className="hover:text-foreground transition-colors">Documentación</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors">Centro de Ayuda</a></li>
+              <li><a href="https://presti-api-aszg.onrender.com/api/docs" className="hover:text-foreground transition-colors">Documentacion API</a></li>
               <li><a href="#" className="hover:text-foreground transition-colors">Política de Privacidad</a></li>
               <li><a href="#" className="hover:text-foreground transition-colors">Términos de Servicio</a></li>
             </ul>
@@ -52,11 +52,10 @@ export function LandingFooter() {
               <Button variant="ghost" size="sm">
                 LinkedIn
               </Button>
-              <Button variant="ghost" size="sm">
-                Twitter
-              </Button>
-              <Button variant="ghost" size="sm">
-                GitHub
+              <Button variant="ghost" size="sm" asChild>
+                <a href="https://presti-api-aszg.onrender.com/api/docs" target="_blank" rel="noreferrer">
+                  API Docs
+                </a>
               </Button>
             </div>
           </div>

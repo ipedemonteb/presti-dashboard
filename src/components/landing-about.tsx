@@ -7,18 +7,18 @@ export function LandingAbout() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
             <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">
-              Construido por Expertos en Fintech, para Líderes Fintech
+              Una capa operativa para decidir con mejor contexto
             </h2>
             <div className="space-y-6">
               <p className="text-lg text-muted-foreground">
-                Presti fue fundada por un equipo de veteranos en tecnología financiera que comprendieron 
-                los desafíos de tomar decisiones crediticias rápidas y precisas a escala. Combinamos 
-                experiencia profunda en el sector con IA de vanguardia para ayudarte a reducir riesgos y maximizar oportunidades.
+                presti ayuda a fintechs a ordenar el proceso de evaluacion crediticia en un solo lugar:
+                clientes, productos, recomendaciones, politica y cartera. La idea no es sumar mas ruido,
+                sino dar una superficie clara para decidir mejor.
               </p>
               <p className="text-lg text-muted-foreground">
-                Nuestra plataforma procesa millones de datos para brindarte insights accionables: 
-                no solo análisis, sino recomendaciones concretas que te permiten identificar clientes ideales, 
-                sugerir productos apropiados y construir una cartera sostenible.
+                En vez de repartir decisiones entre planillas, reglas manuales y herramientas aisladas,
+                la plataforma concentra la logica comercial y de riesgo para que el equipo pueda operar,
+                ajustar criterios y seguir resultados con menos friccion.
               </p>
             </div>
           </div>
@@ -31,8 +31,7 @@ export function LandingAbout() {
               <div className="space-y-2">
                 <h3 className="text-xl font-semibold">Nuestra Misión</h3>
                 <p className="text-muted-foreground">
-                  Democratizar el acceso a herramientas sofisticadas de riesgo crediticio, 
-                  empoderando a fintechs de todos los tamaños para competir con instituciones tradicionales.
+                  Darle a las fintechs una herramienta simple para convertir datos crediticios en decisiones operables.
                 </p>
               </div>
             </div>
@@ -44,8 +43,7 @@ export function LandingAbout() {
               <div className="space-y-2">
                 <h3 className="text-xl font-semibold">Nuestro Enfoque</h3>
                 <p className="text-muted-foreground">
-                  Combinar analítica impulsada por IA con bases de datos completas e interfaces 
-                  intuitivas para entregar insights que generan mejores resultados.
+                  Separar con claridad politicas, productos y seguimiento para que cada decision sea entendible y ajustable.
                 </p>
               </div>
             </div>
@@ -57,8 +55,7 @@ export function LandingAbout() {
               <div className="space-y-2">
                 <h3 className="text-xl font-semibold">Nuestra Visión</h3>
                 <p className="text-muted-foreground">
-                  Convertirnos en el motor de decisión de confianza para cada transacción de 
-                  crédito en el ecosistema fintech, a nivel global.
+                  Convertirnos en la capa de decision crediticia que acompane la operacion diaria de las fintechs.
                 </p>
               </div>
             </div>

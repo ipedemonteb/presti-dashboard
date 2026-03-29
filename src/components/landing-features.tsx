@@ -4,33 +4,33 @@ export function LandingFeatures() {
   const features = [
     {
       icon: Database,
-      title: "Motor de Decisión IA",
-      description: "Acciones concretas basadas en datos históricos y machine learning. No solo análisis, sino recomendaciones específicas."
+      title: "Recomendaciones de productos",
+      description: "Consulta perfiles y obten sugerencias mas alineadas al riesgo y a la oferta disponible en tu fintech."
     },
     {
       icon: RefreshCcw,
-      title: "Aprendizaje Continuo",
-      description: "Sistema actualizable que incorpora los resultados de tus operaciones para mejorar continuamente las predicciones."
+      title: "Configuracion simple",
+      description: "Administra productos, API keys, limites de uso y reglas de negocio desde una sola interfaz."
     },
     {
       icon: FolderKanban,
       title: "Gestión de Cartera",
-      description: "Seguimiento parcial de clientes consultados, permitiendo trazabilidad y análisis de tu portfolio activo."
+      description: "Da seguimiento a clientes monitoreados y visualiza mejoras o deterioros en su situacion crediticia."
     },
     {
       icon: Sliders,
-      title: "Simulación de Escenarios",
-      description: "Experimenta con parámetros y visualiza impactos en tiempo real antes de tomar decisiones críticas."
+      title: "Politica crediticia configurable",
+      description: "Define criterios de elegibilidad como situacion BCRA, deuda externa e historial limpio sin mezclarlo con productos."
     },
     {
       icon: Activity,
-      title: "Monitoreo de Recomendaciones",
-      description: "Seguimiento continuo de nuestras sugerencias con alertas para optimizar tus parámetros según resultados."
+      title: "Uso y suscripcion",
+      description: "Consulta el uso del dia, el plan activo y los accesos de integracion disponibles para tu equipo."
     },
     {
       icon: TrendingUp,
-      title: "Analíticas Predictivas",
-      description: "Proyecciones de comportamiento crediticio y tendencias basadas en patrones históricos y actuales."
+      title: "Vision operativa clara",
+      description: "Combina clientes, productos y recomendaciones en un dashboard pensado para decision crediticia diaria."
     }
   ];
 
@@ -38,10 +38,10 @@ export function LandingFeatures() {
     <section id="features" className="container mx-auto px-4 md:px-6 py-20 md:py-32 scroll-mt-16">
       <div className="flex flex-col items-center text-center mb-16">
         <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">
-          Todo lo que Necesitas para Prestar Mejor
+          Todo lo necesario para operar con mas criterio
         </h2>
         <p className="text-lg text-muted-foreground max-w-2xl">
-          Un ecosistema completo diseñado para fintechs que buscan decisiones más inteligentes
+          Una plataforma enfocada en elegibilidad, oferta y seguimiento para equipos fintech.
         </p>
       </div>
 
