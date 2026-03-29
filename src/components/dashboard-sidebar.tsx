@@ -8,7 +8,7 @@ import {
   LogOut,
   User
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth-provider";
 
@@ -27,6 +27,20 @@ export function DashboardSidebar() {
   const location = useLocation();
   const { user, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+  const [showLabels, setShowLabels] = useState(true);
+
+  useEffect(() => {
+    if (collapsed) {
+      setShowLabels(false);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setShowLabels(true);
+    }, 140);
+
+    return () => window.clearTimeout(timeout);
+  }, [collapsed]);
 
   return (
     <aside 
@@ -44,7 +58,7 @@ export function DashboardSidebar() {
           <div className="flex items-center justify-center size-10 rounded-full bg-primary/10 shrink-0">
             <User className="size-5 text-primary" />
           </div>
-          {!collapsed && (
+          {showLabels && (
             <div className="flex-1 min-w-0 text-left">
               <p className="text-sm font-medium truncate">{user?.nombre || "Usuario"}</p>
               <p className="text-xs text-muted-foreground truncate">{user?.email || ""}</p>
@@ -73,7 +87,7 @@ export function DashboardSidebar() {
               title={collapsed ? item.name : undefined}
             >
               <Icon className="size-5 shrink-0" />
-              {!collapsed && <span>{item.name}</span>}
+              {showLabels && <span>{item.name}</span>}
             </Link>
           );
         })}
@@ -99,7 +113,7 @@ export function DashboardSidebar() {
               title={collapsed ? item.name : undefined}
             >
               <Icon className="size-5 shrink-0" />
-              {!collapsed && <span>{item.name}</span>}
+              {showLabels && <span>{item.name}</span>}
             </Link>
           );
         })}
@@ -113,7 +127,7 @@ export function DashboardSidebar() {
           title={collapsed ? "Cerrar sesión" : undefined}
         >
           <LogOut className="size-5 shrink-0" />
-          {!collapsed && <span>Cerrar sesión</span>}
+          {showLabels && <span>Cerrar sesión</span>}
         </button>
       </div>
     </aside>

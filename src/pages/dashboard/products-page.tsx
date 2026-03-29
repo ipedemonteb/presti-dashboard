@@ -487,7 +487,7 @@ export default function ProductsPage() {
                         <Icon className="h-5 w-5 text-primary" />
                       </div>
                       <div>
-                        <CardTitle className="text-lg">{product.nombre}</CardTitle>
+                        <CardTitle className="text-md leading-snug">{product.nombre}</CardTitle>
                         <CardDescription>{getProductLabel(product.tipo)}</CardDescription>
                       </div>
                     </div>
