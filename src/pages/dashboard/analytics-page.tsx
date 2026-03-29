@@ -13,7 +13,14 @@ import {
 } from "lucide-react";
 import { dashboardService } from "@/lib/dashboard-service";
 import { getNumber } from "@/lib/api-helpers";
-import type { ApiUserResource, DailyUsage, RecommendationResource, ApiProduct } from "@/types/api-resources";
+import type {
+  ApiUserResource,
+  DailyUsage,
+  RecommendationResource,
+  ApiProduct,
+  PortfolioChangeResource,
+  PortfolioSizeResource,
+} from "@/types/api-resources";
 import type { ApiError } from "@/types/auth";
 import { Button } from "@/components/ui/button";
 
@@ -67,57 +74,52 @@ function getRecommendationLabel(item: RecommendationResource) {
   );
 }
 
+function resolvePortfolioChangeType(item: PortfolioChangeResource) {
+  const explicit = (item.changeType ?? item.tipoCambio ?? "").toLowerCase();
+
+  if (explicit.includes("mejor")) return "mejora";
+  if (explicit.includes("deterior") || explicit.includes("empeor")) return "deterioro";
+
+  const previous = typeof item.situacionAnterior === "number" ? item.situacionAnterior : null;
+  const current = typeof item.situacionNueva === "number"
+    ? item.situacionNueva
+    : typeof item.situacionActual === "number"
+      ? item.situacionActual
+      : null;
+
+  if (previous !== null && current !== null) {
+    if (current < previous) return "mejora";
+    if (current > previous) return "deterioro";
+  }
+
+  return "sin_cambios";
+}
+
+function getPortfolioSizeValue(value: PortfolioSizeResource | null) {
+  if (!value) return 0;
+  return getNumber(value.tamanio, getNumber(value.total, getNumber(value.cantidad, 0)));
+}
+
 export default function AnalyticsPage() {
   const [users, setUsers] = useState<ApiUserResource[]>([]);
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [recommendations, setRecommendations] = useState<RecommendationResource[]>([]);
   const [usage, setUsage] = useState<DailyUsage | null>(null);
+  const [portfolioChanges, setPortfolioChanges] = useState<PortfolioChangeResource[]>([]);
+  const [portfolioSize, setPortfolioSize] = useState<PortfolioSizeResource | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-
-  const portfolioSnapshot = [
-    {
-      id: "1",
-      cliente: "Maria Gonzalez",
-      documento: "35.234.567",
-      variacion: "+10.8%",
-      estado: "mejora" as const,
-      detalle: "Cancelo deuda de tarjeta y mejoro su score mensual.",
-    },
-    {
-      id: "2",
-      cliente: "Juan Perez",
-      documento: "28.456.789",
-      variacion: "-5.6%",
-      estado: "deterioro" as const,
-      detalle: "Aparecio nueva deuda informada y requiere revision.",
-    },
-    {
-      id: "3",
-      cliente: "Ana Martinez",
-      documento: "41.567.890",
-      variacion: "+5.1%",
-      estado: "mejora" as const,
-      detalle: "Sostuvo pagos consistentes en los ultimos meses.",
-    },
-    {
-      id: "4",
-      cliente: "Carlos Lopez",
-      documento: "32.678.901",
-      variacion: "-11.9%",
-      estado: "deterioro" as const,
-      detalle: "Presento incumplimiento reciente en producto vigente.",
-    },
-  ];
 
   const loadData = async () => {
     setError("");
 
-    const [usersResult, productsResult, recommendationsResult, usageResult] = await Promise.allSettled([
+    const [usersResult, productsResult, recommendationsResult, usageResult, portfolioResult, portfolioSizeResult] = await Promise.allSettled([
       dashboardService.getUsers(),
       dashboardService.getProducts(),
       dashboardService.getRecommendations(),
       dashboardService.getUsageToday(),
+      dashboardService.getPortfolio(),
+      dashboardService.getPortfolioSize(),
     ]);
 
     if (usersResult.status === "fulfilled") {
@@ -138,7 +140,19 @@ export default function AnalyticsPage() {
       setUsage(usageResult.value);
     }
 
-    const failures = [usersResult, productsResult, usageResult].filter(
+    if (portfolioResult.status === "fulfilled") {
+      setPortfolioChanges(portfolioResult.value);
+    } else {
+      setPortfolioChanges([]);
+    }
+
+    if (portfolioSizeResult.status === "fulfilled") {
+      setPortfolioSize(portfolioSizeResult.value);
+    } else {
+      setPortfolioSize(null);
+    }
+
+    const failures = [usersResult, productsResult, usageResult, portfolioResult, portfolioSizeResult].filter(
       (result) => result.status === "rejected"
     );
 
@@ -202,15 +216,15 @@ export default function AnalyticsPage() {
   }, [products, recommendations, usage, users]);
 
   const portfolioMetrics = useMemo(() => {
-    const improved = portfolioSnapshot.filter((item) => item.estado === "mejora").length;
-    const deteriorated = portfolioSnapshot.filter((item) => item.estado === "deterioro").length;
+    const improved = portfolioChanges.filter((item) => resolvePortfolioChangeType(item) === "mejora").length;
+    const deteriorated = portfolioChanges.filter((item) => resolvePortfolioChangeType(item) === "deterioro").length;
 
     return {
-      monitored: portfolioSnapshot.length,
+      monitored: getPortfolioSizeValue(portfolioSize) || portfolioChanges.length,
       improved,
       deteriorated,
     };
-  }, [portfolioSnapshot]);
+  }, [portfolioChanges, portfolioSize]);
 
   const recentRecommendations = useMemo(() => recommendations.slice(0, 5), [recommendations]);
 
@@ -351,9 +365,6 @@ export default function AnalyticsPage() {
                     <ArrowDownCircle className="size-5 text-red-600" />
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Este bloque de cartera es estatico por ahora y se puede conectar despues a una fuente real de seguimiento historico.
-                </p>
               </div>
             </div>
           </div>
