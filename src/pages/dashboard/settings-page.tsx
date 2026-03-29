@@ -23,7 +23,8 @@ function getPlanName(plan?: ActiveSubscription | SubscriptionPlan | null) {
   if (!plan) return "Sin plan";
   const planName = "plan" in plan ? plan.plan : undefined;
   const displayName = "name" in plan ? plan.name : undefined;
-  return plan.nombre ?? planName ?? displayName ?? "Plan sin nombre";
+  const raw = plan.tipo ?? plan.nombre ?? planName ?? displayName ?? "Plan sin nombre";
+  return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
 }
 
 export default function SettingsPage() {
@@ -69,7 +70,7 @@ export default function SettingsPage() {
 
   const dailyLimit = useMemo(() => {
     if (!usage && !activeSubscription) return 0;
-    return getNumber(usage?.limiteDiario, getNumber(activeSubscription?.limiteDiario, 0));
+    return getNumber(usage?.limiteDiario, getNumber(activeSubscription?.limites?.maxConsultasDiarias ?? activeSubscription?.limiteDiario, 0));
   }, [activeSubscription, usage]);
 
   const handleCreateApiKey = async () => {
@@ -182,26 +183,6 @@ export default function SettingsPage() {
                   <div className="rounded-lg border p-4">
                     <p className="text-sm text-muted-foreground">Limite diario</p>
                     <p className="mt-1 text-lg font-semibold">{dailyLimit || "Sin dato"}</p>
-                  </div>
-                </div>
-
-                <div className="rounded-lg border p-4">
-                  <p className="font-medium">Planes disponibles</p>
-                  <div className="mt-3 grid gap-3 md:grid-cols-2">
-                    {plans.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No hay planes visibles en la API.</p>
-                    ) : (
-                      plans.map((plan, index) => (
-                        <div key={plan.id ?? `${getPlanName(plan)}-${index}`} className="rounded-md border bg-muted/30 p-3">
-                          <p className="font-medium">{getPlanName(plan)}</p>
-                          <p className="text-sm text-muted-foreground">{plan.descripcion ?? "Sin descripcion"}</p>
-                          <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
-                            <span>Precio: {typeof (plan.precio ?? plan.price) === "number" ? `$${plan.precio ?? plan.price}` : "Sin dato"}</span>
-                            <span>Limite diario: {plan.limiteDiario ?? "-"}</span>
-                          </div>
-                        </div>
-                      ))
-                    )}
                   </div>
                 </div>
               </>

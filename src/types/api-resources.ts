@@ -52,6 +52,7 @@ export interface ApiKeyResource {
 
 export interface SubscriptionPlan {
   id?: string;
+  tipo?: string;
   nombre?: string;
   name?: string;
   descripcion?: string;
@@ -59,10 +60,12 @@ export interface SubscriptionPlan {
   price?: number;
   limiteDiario?: number;
   limiteMensual?: number;
+  limites?: { maxConsultasDiarias?: number };
 }
 
 export interface ActiveSubscription {
   id?: string;
+  tipo?: string;
   nombre?: string;
   plan?: string;
   estado?: string;
@@ -71,6 +74,7 @@ export interface ActiveSubscription {
   fechaFin?: string;
   limiteDiario?: number;
   limiteMensual?: number;
+  limites?: { maxConsultasDiarias?: number };
 }
 
 export interface DailyUsage {
