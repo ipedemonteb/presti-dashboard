@@ -4,6 +4,7 @@ import {
   Sliders, 
   Package, 
   FolderKanban,
+  Search,
   Settings,
   LogOut,
   User
@@ -17,6 +18,7 @@ const navigation = [
   { name: "Parámetros", href: "/dashboard/parameters", icon: Sliders },
   { name: "Productos", href: "/dashboard/products", icon: Package },
   { name: "Cartera", href: "/dashboard/portfolio", icon: FolderKanban },
+  { name: "Query", href: "/dashboard/query", icon: Search },
 ];
 
 const secondaryNavigation = [

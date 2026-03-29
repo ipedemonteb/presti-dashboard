@@ -94,6 +94,7 @@ export interface RecommendationResource {
   usuarioCuil?: string;
   usuarioNombre?: string;
   nombre?: string;
+  usuario?: ApiUserResource | Record<string, unknown>;
   productoNombre?: string;
   producto?: string | ApiProduct | Record<string, unknown>;
   resultado?: string | Record<string, unknown>;

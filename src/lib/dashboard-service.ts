@@ -49,6 +49,11 @@ export const dashboardService = {
     return extractArray<RecommendationResource>(response.data);
   },
 
+  async createRecommendation(cuil: string) {
+    const response = await api.post("/v1/recomendaciones", { cuil });
+    return response.data;
+  },
+
   async getApiKeys() {
     const response = await api.get("/v1/clientes/api-keys");
     return extractArray<ApiKeyResource>(response.data);

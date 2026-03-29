@@ -5,6 +5,7 @@ import LoginPage from "@/pages/login-page";
 import RegisterPage from "@/pages/register-page";
 import ForgotPasswordPage from "@/pages/forgot-password-page";
 import NotFoundPage from "@/pages/not-found-page";
+import QueryPage from "@/pages/query-page";
 
 import { ProtectedRoute } from "@/components/protected-route";
 import { DashboardLayout } from "@/components/dashboard-layout";
@@ -54,6 +55,10 @@ export const router = createBrowserRouter([
       {
         path: "portfolio",
         element: <PortfolioPage />,
+      },
+      {
+        path: "query",
+        element: <QueryPage />,
       },
       {
         path: "settings",
