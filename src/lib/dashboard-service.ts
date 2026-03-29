@@ -51,7 +51,7 @@ export const dashboardService = {
   },
 
   async createRecommendation(cuil: string) {
-    const response = await api.post("/v1/recomendaciones", { cuil });
+    const response = await api.post("/v1/recomendaciones", { cuil }, { timeout: 60000 });
     return response.data;
   },
 

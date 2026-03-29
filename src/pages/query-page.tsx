@@ -57,6 +57,14 @@ function getRecommendationCuil(item: RecommendationResource) {
   return null;
 }
 
+function sortRecommendationsByDate(items: RecommendationResource[]) {
+  return [...items].sort((a, b) => {
+    const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return bTime - aTime;
+  });
+}
+
 export default function QueryPage() {
   const [cuil, setCuil] = useState("");
   const [results, setResults] = useState<RecommendationResource[]>([]);
@@ -88,15 +96,24 @@ export default function QueryPage() {
     setIsLoading(true);
     setResults([]);
 
-    const sinceDate = new Date(Date.now() - 60_000).toISOString();
+    const requestStartedAt = new Date(Date.now() - 5_000).toISOString();
 
     try {
       await dashboardService.createRecommendation(normalizedCuil);
-      const recommendations = await dashboardService.getRecommendations(sinceDate);
-      const filtered = recommendations.filter((item) => getRecommendationCuil(item) === normalizedCuil);
 
-      setResults(filtered);
+      const recommendations = await dashboardService.getRecommendations(requestStartedAt);
+      const sortedRecommendations = sortRecommendationsByDate(recommendations);
+      const filteredByCuil = sortedRecommendations.filter(
+        (item) => getRecommendationCuil(item) === normalizedCuil
+      );
+      const matchedRecommendations = filteredByCuil.length > 0 ? filteredByCuil : sortedRecommendations;
+
       setSearchedCuil(normalizedCuil);
+      setResults(matchedRecommendations.slice(0, 5));
+
+      if (matchedRecommendations.length === 0) {
+        setError("La consulta se ejecuto, pero todavia no devolvio recomendaciones visibles.");
+      }
     } catch (err) {
       const apiError = (err as { response?: { data?: ApiError } }).response?.data;
       setError(apiError?.message ?? "No pudimos consultar recomendaciones para ese CUIL.");
