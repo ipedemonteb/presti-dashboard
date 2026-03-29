@@ -1,9 +1,8 @@
 import axios from "axios";
 
-// En desarrollo usamos el proxy de Vite, en producción la URL completa
-const API_BASE_URL = import.meta.env.DEV 
-  ? "/api" 
-  : "https://presti-api.onrender.com/api";
+const API_BASE_URL = import.meta.env.DEV
+  ? "/api"
+  : import.meta.env.VITE_API_URL;
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
